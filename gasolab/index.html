@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0e14">
+<title>GasoLab — Interpretação de Gasometria</title>
+<style>
+:root {
+  --bg:      #0a0e14;
+  --surface: #0e1520;
+  --panel:   #131c28;
+  --panel2:  #172030;
+  --border:  #1f3048;
+  --border2: #2a4060;
+  --cyan:    #00d4ff;
+  --green:   #00e896;
+  --red:     #ff3b30;
+  --yellow:  #ffd60a;
+  --text:    #d0e8f8;
+  --text2:   #7a9ab8;
+  --text3:   #3d5a78;
+  --mono: 'Courier New', monospace;
+  --sans: -apple-system, 'Segoe UI', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14px; min-height:100vh; }
+
+/* HEADER */
+#header {
+  height:56px; background:var(--surface); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 20px; gap:14px;
+  position:sticky; top:0; z-index:100;
+}
+.header-logo { font-family:var(--sans); font-size:1.8rem; font-weight:700; color:var(--cyan); letter-spacing:-0.5px; line-height:1; }
+.header-logo span { color:var(--text2); font-size:10px; display:block; letter-spacing:0; margin-top:-2px; font-weight:400; }
+.header-badge { margin-left:auto; background:var(--panel); border:1px solid var(--border2); color:var(--text2); font-size:10px; font-weight:600; padding:3px 10px; border-radius:5px; letter-spacing:0.08em; text-transform:uppercase; }
+
+/* LAYOUT */
+.main { max-width:1080px; margin:0 auto; padding:24px 16px 60px; display:grid; grid-template-columns:420px 1fr; gap:16px; align-items:start; }
+@media(max-width:800px){ .main{ grid-template-columns:1fr; } }
+
+/* CARD */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.card-header { padding:11px 16px; border-bottom:1px solid var(--border); }
+.card-title { font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--cyan); }
+.card-body { padding:16px; }
+
+/* SECTION LABEL */
+.slabel { font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--text2); margin-bottom:10px; margin-top:16px; }
+.slabel:first-child { margin-top:0; }
+
+/* TOGGLES */
+.tgroup { display:flex; gap:6px; margin-bottom:14px; }
+.tbtn { flex:1; padding:7px; border-radius:6px; border:1px solid var(--border2); background:var(--panel); color:var(--text2); font-family:var(--sans); font-size:12px; font-weight:500; cursor:pointer; transition:all 0.15s; text-align:center; }
+.tbtn.active { background:var(--panel2); border-color:var(--cyan); color:var(--cyan); }
+
+/* INPUTS */
+.igrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:start; }
+.igrid.t3 { grid-template-columns:1fr 1fr 1fr; }
+.igrid.t1 { grid-template-columns:1fr; }
+@media(max-width:500px){ .igrid.t4 { grid-template-columns:1fr 1fr; } }
+.field { display:flex; flex-direction:column; gap:4px; }
+.field label { font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--text); font-weight:600; min-height:28px; display:flex; align-items:flex-end; }
+.field label .u { color:var(--text2); font-weight:400; text-transform:none; letter-spacing:0; }
+.field input { background:var(--panel); border:1px solid var(--border2); border-radius:6px; padding:8px 10px; color:var(--text); font-family:var(--mono); font-size:14px; font-weight:700; width:100%; transition:border-color 0.15s; -moz-appearance:textfield; }
+.field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.field input:focus { outline:none; border-color:var(--cyan); }
+
+/* BUTTONS */
+.btn-go { width:100%; padding:12px; background:var(--cyan); border:none; border-radius:7px; color:#000; font-family:var(--sans); font-size:14px; font-weight:700; cursor:pointer; transition:opacity 0.15s; margin-top:14px; }
+.btn-go:hover { opacity:0.85; }
+.btn-cl { width:100%; padding:8px; background:transparent; border:1px solid var(--border2); border-radius:7px; color:var(--text2); font-family:var(--sans); font-size:12px; cursor:pointer; transition:all 0.15s; margin-top:7px; }
+.btn-cl:hover { border-color:var(--text2); color:var(--text); }
+
+/* PLACEHOLDER */
+.placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; color:var(--text3); gap:10px; text-align:center; }
+.placeholder .ic { font-size:32px; opacity:0.35; }
+.placeholder p { font-size:12px; line-height:1.6; max-width:220px; color:var(--text2); }
+
+/* RESULTS */
+.rscroll { max-height:calc(100vh - 80px); overflow-y:auto; padding:16px; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+.rscroll::-webkit-scrollbar{width:3px;} .rscroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+.rb { border-radius:7px; padding:12px 14px; margin-bottom:10px; border-left:2px solid transparent; }
+.rb.cyan   { background:rgba(0,212,255,0.07);  border-color:var(--cyan); }
+.rb.green  { background:rgba(0,232,150,0.07);  border-color:var(--green); }
+.rb.red    { background:rgba(255,59,48,0.08);  border-color:var(--red); }
+.rb.yellow { background:rgba(255,214,10,0.07); border-color:var(--yellow); }
+.rb.panel  { background:var(--panel); border-color:var(--border2); }
+.rb.purple { background:rgba(160,120,255,0.07); border-color:#a078ff; }
+
+.rbl { font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text2); margin-bottom:4px; }
+.rbt { font-size:15px; font-weight:700; color:var(--text); margin-bottom:3px; line-height:1.3; }
+.rbs { font-size:12px; color:var(--text); line-height:1.55; }
+.rbs b { color:var(--text); }
+
+.chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:9px; }
+.chip { background:var(--panel2); border:1px solid var(--border2); border-radius:4px; padding:4px 9px; font-size:11px; color:var(--text); font-family:var(--mono); }
+.chip b { color:var(--text); }
+.chip.ok b { color:var(--green); }
+.chip.hi b { color:var(--red); }
+.chip.lo b { color:var(--yellow); }
+
+/* pH bar */
+.phbar { height:5px; border-radius:3px; background:linear-gradient(to right,#ff3b30 0%,#ffd60a 42%,#00e896 46%,#00e896 54%,#ffd60a 58%,#ff3b30 100%); position:relative; margin:8px 0 4px; }
+.phneedle { position:absolute; top:-5px; width:15px; height:15px; background:var(--text); border-radius:50%; border:2px solid var(--bg); transform:translateX(-50%); transition:left 0.4s ease; box-shadow:0 0 0 2px var(--cyan); }
+.phlabels { display:flex; justify-content:space-between; font-size:9px; color:var(--text2); font-family:var(--mono); }
+
+.divider { border:none; border-top:1px solid var(--border); margin:12px 0; }
+
+/* DDx */
+.ddxt { font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--cyan); margin:12px 0 6px; }
+.ddxg { font-size:10px; font-weight:600; color:var(--text); margin:8px 0 3px 2px; }
+.ddxi { display:flex; align-items:flex-start; gap:6px; padding:3px 4px; font-size:12px; color:var(--text); line-height:1.45; }
+.ddxi::before { content:'›'; color:var(--text2); flex-shrink:0; }
+
+.disc { background:var(--panel2); border:1px solid var(--border2); border-radius:7px; padding:10px 12px; font-size:11px; color:var(--text); line-height:1.5; margin-top:14px; display:flex; gap:7px; }
+
+@keyframes fi { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.a  { animation:fi 0.25s ease both; }
+.d1 { animation-delay:0.04s; }
+.d2 { animation-delay:0.08s; }
+.d3 { animation-delay:0.12s; }
+.d4 { animation-delay:0.16s; }
+.d5 { animation-delay:0.20s; }
+
+/* Collapsible opcional */
+.opt-open { border-color: var(--cyan) !important; color: var(--cyan) !important; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <a href="/" style="display:inline-flex;align-items:center;gap:5px;color:var(--text2);font-size:11px;font-weight:600;text-decoration:none;border:1px solid var(--border2);border-radius:6px;padding:4px 10px;transition:all .2s;flex-shrink:0;"
+    onmouseover="this.style.color='var(--cyan)';this.style.borderColor='rgba(0,212,255,.4)'" onmouseout="this.style.color='var(--text2)';this.style.borderColor='var(--border2)'">
+    ← VentiLab
+  </a>
+  <div class="header-logo" style="flex:1;text-align:center;">Gaso<em style="color:var(--green);font-style:normal;">Lab</em><span>Interpretação de Gasometria</span></div>
+  <button onclick="abrirTutorial()" style="display:inline-flex;align-items:center;gap:5px;color:var(--cyan);font-size:11px;font-weight:600;background:transparent;border:1px solid rgba(0,212,255,.3);border-radius:6px;padding:4px 10px;cursor:pointer;flex-shrink:0;transition:all .2s;"
+    onmouseover="this.style.background='rgba(0,212,255,.08)'" onmouseout="this.style.background='transparent'">
+    Tutorial
+  </button>
+</div>
+
+<!-- TUTORIAL OVERLAY -->
+<div id="tutorial-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:8000;overflow-y:auto;padding:20px;">
+  <div style="max-width:600px;margin:0 auto;background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px 24px;position:relative;">
+    <button onclick="fecharTutorial()" style="position:absolute;top:14px;right:14px;background:transparent;border:none;color:var(--text2);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:2rem;margin-bottom:8px;">🧪</div>
+      <div style="font-size:1.3rem;font-weight:700;color:var(--cyan);">Bem-vindo ao GasoLab</div>
+      <div style="font-size:0.85rem;color:var(--text2);margin-top:4px;">Interpretação de gasometria em tempo real</div>
+    </div>
+
+    <div style="background:rgba(0,212,255,.06);border-left:3px solid var(--cyan);border-radius:6px;padding:14px 16px;margin-bottom:18px;font-size:13px;color:var(--text);line-height:1.8;">
+      Gasometria na mão e dificuldade de entender? O GasoLab é melhor que qualquer videoaula, resumo ou PDF. Você coloca os dados do seu caso real e a aula acontece ao vivo — entendendo de verdade o distúrbio, as compensações esperadas e as hipóteses diagnósticas para um raciocínio clínico completo.
+    </div>
+
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;">Como usar</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="background:var(--cyan);color:#000;font-size:11px;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;"><strong style="color:var(--white);">Selecione o tipo de amostra</strong> — arterial ou venosa — e se o paciente está em ventilação mecânica ou respiração espontânea.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="background:var(--cyan);color:#000;font-size:11px;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;"><strong style="color:var(--white);">Preencha os dados obrigatórios:</strong> pH, PCO₂ e HCO₃⁻. Os demais campos (Na⁺, K⁺, Cl⁻, albumina, lactato, SpO₂, FiO₂) enriquecem muito a análise — preencha o máximo que tiver disponível.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="background:var(--cyan);color:#000;font-size:11px;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;"><strong style="color:var(--white);">Clique em "Analisar Gasometria"</strong> — o sistema identifica o distúrbio primário, calcula as compensações esperadas, o ânion gap corrigido por albumina, o delta ratio e gera os diagnósticos diferenciais baseados nas melhores referências bibliográficas.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="background:var(--green);color:#000;font-size:11px;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6;"><strong style="color:var(--white);">Leia a síntese clínica</strong> ao final — ela integra todos os achados em uma linguagem de raciocínio clínico real, como um especialista comentaria o caso.</div>
+      </div>
+    </div>
+
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--text2);line-height:1.7;">
+      <strong style="color:var(--green);">💡 Dica:</strong> Use junto com o VentiLab — simule o paciente ventilado e depois interprete a gasometria que o simulador gerou. O aprendizado é completo.
+    </div>
+
+    <button onclick="fecharTutorial()" style="width:100%;background:var(--cyan);color:#000;font-weight:700;font-size:14px;padding:12px;border:none;border-radius:8px;cursor:pointer;">
+      Entendido — Vamos analisar →
+    </button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- INPUTS -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">Dados da Gasometria</div></div>
+    <div class="card-body">
+
+      <div class="slabel">Tipo de amostra</div>
+      <div class="tgroup">
+        <button class="tbtn active" id="btn-arterial" onclick="setTipo('arterial')">Arterial</button>
+        <button class="tbtn"        id="btn-venosa"   onclick="setTipo('venosa')">Venosa</button>
+      </div>
+
+      <div class="slabel">Situação ventilatória</div>
+      <div class="tgroup">
+        <button class="tbtn active" id="btn-intubado"   onclick="setVent('intubado')">Intubado / VM</button>
+        <button class="tbtn"        id="btn-espontaneo" onclick="setVent('espontaneo')">Espontânea</button>
+      </div>
+
+      <div class="slabel">Gasometria</div>
+      <div class="igrid">
+        <div class="field"><label>pH <span class="u">(7,35–7,45)</span></label><input type="number" id="ph"   placeholder="7.40" step="0.01"></div>
+        <div class="field"><label>PCO₂ <span class="u">mmHg (35–45)</span></label><input type="number" id="pco2" placeholder="40" step="1"></div>
+        <div class="field"><label id="lbl-po2">PaO₂ <span class="u">mmHg (80–100)</span></label><input type="number" id="po2" placeholder="90" step="1"></div>
+        <div class="field"><label>HCO₃⁻ <span class="u">mEq/L (22–26)</span></label><input type="number" id="hco3" placeholder="24" step="0.1"></div>
+        <div class="field"><label id="lbl-spo2">SpO₂ <span class="u">% (≥ 94)</span></label><input type="number" id="spo2" placeholder="98" step="1" min="1" max="100"></div>
+        <div class="field"><label>FiO₂ <span class="u">% (21–100)</span></label><input type="number" id="fio2" placeholder="21" step="1" min="21" max="100"></div>
+      </div>
+
+      <div class="slabel">Eletrólitos</div>
+      <div class="igrid">
+        <div class="field"><label>Na⁺ <span class="u">mEq/L (135–145)</span></label><input type="number" id="sodio"    placeholder="140" step="1"></div>
+        <div class="field"><label>K⁺ <span class="u">mEq/L (3,5–5,0)</span></label><input type="number"  id="potassio" placeholder="4.0" step="0.1"></div>
+        <div class="field"><label>Cl⁻ <span class="u">mEq/L (98–108)</span></label><input type="number" id="cloro"    placeholder="105" step="1"></div>
+        <div class="field"><label>Glicemia <span class="u">mg/dL (opcional)</span></label><input type="number" id="glic_serica" placeholder="90" step="1" min="10"></div>
+      </div>
+
+      <div class="slabel">Albumina (correção do ânion gap)</div>
+      <div class="igrid t1">
+        <div class="field"><label>Albumina <span class="u">g/dL (3,5–5,0)</span></label><input type="number" id="albumina" placeholder="4.0" step="0.1" min="0.5" max="6"></div>
+      </div>
+
+      <!-- LACTATO -->
+      <div class="slabel">Lactato sérico</div>
+      <div class="igrid" style="align-items:end">
+        <div class="field">
+          <label>Lactato <span class="u" id="lbl-lac-unit">mmol/L (&lt;2,0)</span></label>
+          <input type="number" id="lactato" placeholder="1.2" step="0.1" min="0">
+        </div>
+        <div class="field">
+          <label>Unidade</label>
+          <div class="tgroup" style="margin-bottom:0">
+            <button class="tbtn active" id="btn-mmol" onclick="setLacUnit('mmol')">mmol/L</button>
+            <button class="tbtn"        id="btn-mgdl" onclick="setLacUnit('mgdl')">mg/dL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- IDADE -->
+      <div class="slabel">Idade (para gradiente A-a)</div>
+      <div class="igrid t1">
+        <div class="field">
+          <label>Idade <span class="u">anos</span></label>
+          <input type="number" id="idade" placeholder="40" step="1" min="1" max="120">
+        </div>
+      </div>
+
+      <!-- EXAMES OPCIONAIS -->
+      <div style="margin-top:14px">
+        <button class="btn-cl" onclick="toggleOpcional()" id="btn-opcional" style="text-align:left;padding:9px 12px;width:100%;display:flex;justify-content:space-between;align-items:center">
+          <span>▸ Exames complementares opcionais</span>
+          <span style="font-size:10px;color:var(--text3)">Gap osmolar · AG urinário</span>
+        </button>
+        <div id="opcional-section" style="display:none;margin-top:10px">
+
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:12px 14px;margin-bottom:10px;font-size:11px;color:var(--text2);line-height:1.5">
+            <b style="color:var(--cyan)">Por que preencher estes campos?</b><br>
+            O gap osmolar sérico ajuda a detectar intoxicações por álcoois tóxicos (metanol, etilenoglicol) em acidoses com AG elevado sem causa óbvia. O ânion gap urinário diferencia causas renais de extra-renais na acidose com AG normal. Preencha apenas os que tiver disponíveis.
+          </div>
+
+          <div class="slabel">Gap osmolar sérico</div>
+          <div class="igrid t3">
+            <div class="field"><label>Glicemia <span class="u">mg/dL</span></label><input type="number" id="glicemia" placeholder="90" step="1"></div>
+            <div class="field"><label>Ureia <span class="u">mg/dL</span></label><input type="number" id="ureia" placeholder="30" step="1"></div>
+            <div class="field"><label>Osmol. medida <span class="u">mOsm/kg</span></label><input type="number" id="osm_medida" placeholder="290" step="1"></div>
+          </div>
+
+          <div class="slabel">Ânion gap urinário</div>
+          <div style="background:var(--panel);border-left:3px solid var(--border2);border-radius:4px;padding:8px 10px;margin-bottom:10px;font-size:10px;color:var(--text2);line-height:1.5">
+            Solicitar urina spot (amostra única): Na⁺, K⁺, Cl⁻ e pH urinários. Pedir junto quando suspeitar de acidose tubular renal ou querer diferenciar de diarreia.
+          </div>
+          <div class="igrid" style="grid-template-columns:1fr 1fr 1fr 1fr">
+            <div class="field"><label>Na⁺ urin. <span class="u">mEq/L</span></label><input type="number" id="na_u" placeholder="60" step="1"></div>
+            <div class="field"><label>K⁺ urin. <span class="u">mEq/L</span></label><input type="number" id="k_u" placeholder="20" step="1"></div>
+            <div class="field"><label>Cl⁻ urin. <span class="u">mEq/L</span></label><input type="number" id="cl_u" placeholder="80" step="1"></div>
+            <div class="field"><label>pH urin. <span class="u">(4,5–8,0)</span></label><input type="number" id="ph_u" placeholder="5.5" step="0.1" min="4" max="9"></div>
+          </div>
+          <div style="margin-top:8px">
+            <div style="font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Gap osmolar urinário (opcional)</div>
+            <div style="font-size:10px;color:var(--text2);background:var(--panel);border-left:3px solid var(--border2);border-radius:4px;padding:7px 10px;margin-bottom:8px;line-height:1.5">
+              Útil quando AGU é pouco confiável (pH_u > 6,5 ou Na_u &lt; 20). Gap osmolar urinário &lt; 40 mOsm/kg indica falha na excreção de amônio (causa renal). Solicitar: osmolalidade urinária medida ou ureia + glicemia urinários.
+            </div>
+            <div class="igrid t3">
+              <div class="field"><label>Osm. urin. medida <span class="u">mOsm/kg</span></label><input type="number" id="osm_u_medida" placeholder="400" step="1"></div>
+              <div class="field"><label>Ureia urin. <span class="u">mg/dL</span></label><input type="number" id="ureia_u" placeholder="200" step="1"></div>
+              <div class="field"><label>Glicose urin. <span class="u">mg/dL</span></label><input type="number" id="glic_u" placeholder="0" step="1"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <button class="btn-go" onclick="analisar()">⚗ Analisar Gasometria</button>
+      <button class="btn-cl" onclick="limpar()">Limpar campos</button>
+
+      <!-- DEV ONLY: visível apenas em localhost -->
+      <div id="dev-test-panel" style="display:none;margin-top:14px;border:1px dashed #2a4060;border-radius:8px;padding:10px 12px;background:rgba(0,212,255,0.04)">
+        <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#00d4ff;margin-bottom:8px">🛠 Casos de teste (localhost)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+          <button class="btn-cl" style="font-size:10px;padding:5px 6px" onclick="testar('acid_met_ag')">Acid.Met. AG alto</button>
+          <button class="btn-cl" style="font-size:10px;padding:5px 6px" onclick="testar('acid_met_normal')">Acid.Met. AG normal</button>
+          <button class="btn-cl" style="font-size:10px;padding:5px 6px" onclick="testar('acid_resp_aguda')">Acid.Resp. aguda</button>
+          <button class="btn-cl" style="font-size:10px;padding:5px 6px" onclick="testar('acid_resp_cronica')">Acid.Resp. crônica</button>
+          <button class="btn-cl" style="font-size:10px;padding:5px 6px" onclick="testar('alc_met')">Alcalose Met.</button>
+          <button class="btn-cl" style="font-size:10px;padding:5px 6px" onclick="testar('alc_resp')">Alcalose Resp.</button>
+          <button class="btn-cl" style="font-size:10px;padding:5px 6px" onclick="testar('misto_ar_alcmet')">Misto: AR + AlcMet</button>
+          <button class="btn-cl" style="font-size:10px;padding:5px 6px" onclick="testar('misto_ar_acidmet')">Misto: AR + AcidMet</button>
+          <button class="btn-cl" style="font-size:10px;padding:5px 6px" onclick="testar('duplo_ag')">Duplo AG</button>
+          <button class="btn-cl" style="font-size:10px;padding:5px 6px" onclick="testar('normal')">Normal</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">Interpretação</div></div>
+    <div id="result-area">
+      <div class="placeholder">
+        <div class="ic">⚗️</div>
+        <p>Preencha os campos e clique em <b>Analisar</b> para ver a interpretação completa.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let tipoAmostra='arterial', tipoVent='intubado';
+
+function setTipo(t){
+  tipoAmostra=t;
+  document.getElementById('btn-arterial').classList.toggle('active',t==='arterial');
+  document.getElementById('btn-venosa').classList.toggle('active',t==='venosa');
+  document.getElementById('lbl-po2').innerHTML=t==='arterial'?'PaO₂ <span class="u">mmHg (80–100)</span>':'PvO₂ <span class="u">mmHg (35–45)</span>';
+  document.getElementById('lbl-spo2').innerHTML=t==='arterial'?'SpO₂ <span class="u">% (≥ 94)</span>':'SvO₂ <span class="u">% (> 70)</span>';
+}
+function setVent(v){
+  tipoVent=v;
+  document.getElementById('btn-intubado').classList.toggle('active',v==='intubado');
+  document.getElementById('btn-espontaneo').classList.toggle('active',v==='espontaneo');
+}
+function g(id){return parseFloat(document.getElementById(id).value);}
+
+function limpar(){
+  ['ph','pco2','po2','hco3','spo2','fio2','sodio','potassio','cloro','albumina',
+   'lactato','idade','glicemia','ureia','osm_medida','na_u','k_u','cl_u','ph_u','osm_u_medida','ureia_u','glic_u','glic_serica'].forEach(id=>document.getElementById(id).value='');
+  // resetar estado interno
+  lacUnit = 'mmol';
+  document.getElementById('btn-mmol').classList.add('active');
+  document.getElementById('btn-mgdl').classList.remove('active');
+  document.getElementById('lbl-lac-unit').textContent = 'mmol/L (<2,0)';
+  // fechar seção opcional se estiver aberta
+  if(opcionalAberto){ toggleOpcional(); }
+  document.getElementById('result-area').innerHTML='<div class="placeholder"><div class="ic">⚗️</div><p>Preencha os campos e clique em <b>Analisar</b> para ver a interpretação completa.</p></div>';
+}
+
+// ── DEV: exibir painel de testes apenas em localhost ──
+(function(){
+  const h = window.location.hostname;
+  if(h === 'localhost' || h === '127.0.0.1' || h === ''){
+    const p = document.getElementById('dev-test-panel');
+    if(p) p.style.display = 'block';
+  }
+})();
+
+// ── DEV: casos de teste pré-definidos ──
+const CASOS_TESTE = {
+  normal: {
+    ph:7.40, pco2:40, hco3:24, po2:95, spo2:98, fio2:21,
+    sodio:140, potassio:4.0, cloro:104, albumina:4.0, lactato:'',
+    label:'Normal'
+  },
+  acid_met_ag: {
+    // Acidose metabólica com AG alto + compensação adequada (Winter ok)
+    ph:7.20, pco2:28, hco3:10, po2:88, spo2:95, fio2:40,
+    sodio:140, potassio:5.2, cloro:100, albumina:3.0, lactato:6.5,
+    label:'Acidose metabólica AG alto (lática) + compensação adequada'
+  },
+  acid_met_normal: {
+    // Acidose metabólica AG normal (hiperclorêmica)
+    ph:7.28, pco2:30, hco3:14, po2:90, spo2:96, fio2:21,
+    sodio:140, potassio:3.8, cloro:116, albumina:4.0, lactato:1.2,
+    label:'Acidose metabólica AG normal (hiperclorêmica)'
+  },
+  acid_resp_aguda: {
+    // Acidose respiratória aguda — HCO3 levemente acima de 24 (compensação aguda)
+    ph:7.25, pco2:65, hco3:28, po2:58, spo2:90, fio2:40,
+    sodio:140, potassio:4.5, cloro:102, albumina:4.0, lactato:'',
+    label:'Acidose respiratória aguda'
+  },
+  acid_resp_cronica: {
+    // Acidose respiratória crônica — HCO3 elevado por compensação renal
+    ph:7.35, pco2:60, hco3:33, po2:62, spo2:91, fio2:28,
+    sodio:140, potassio:4.2, cloro:98, albumina:3.8, lactato:'',
+    label:'Acidose respiratória crônica compensada'
+  },
+  alc_met: {
+    // Alcalose metabólica com compensação respiratória adequada
+    ph:7.52, pco2:48, hco3:38, po2:85, spo2:97, fio2:21,
+    sodio:138, potassio:2.8, cloro:88, albumina:4.0, lactato:'',
+    label:'Alcalose metabólica + hipocalemia'
+  },
+  alc_resp: {
+    // Alcalose respiratória com compensação metabólica adequada
+    ph:7.52, pco2:28, hco3:22, po2:95, spo2:98, fio2:21,
+    sodio:140, potassio:3.5, cloro:106, albumina:4.0, lactato:'',
+    label:'Alcalose respiratória'
+  },
+  misto_ar_alcmet: {
+    // Acidose respiratória crônica + ALCALOSE metabólica associada (HCO3 acima da compensação esperada)
+    ph:7.42, pco2:58, hco3:38, po2:65, spo2:92, fio2:28,
+    sodio:140, potassio:3.0, cloro:90, albumina:3.8, lactato:'',
+    label:'Misto: Acid.Resp.Crônica + Alcalose Metabólica'
+  },
+  misto_ar_acidmet: {
+    // Acidose respiratória + ACIDOSE metabólica (HCO3 abaixo da compensação esperada)
+    ph:7.18, pco2:60, hco3:22, po2:55, spo2:88, fio2:50,
+    sodio:138, potassio:5.5, cloro:104, albumina:4.0, lactato:4.2,
+    label:'Misto: Acid.Resp. + Acid.Metabólica'
+  },
+  duplo_ag: {
+    // Duplo distúrbio: AG alto + AG normal (delta ratio < 1)
+    ph:7.15, pco2:22, hco3:7, po2:80, spo2:94, fio2:40,
+    sodio:140, potassio:5.0, cloro:110, albumina:3.5, lactato:5.0,
+    label:'Duplo distúrbio: AG alto + hiperclorêmica'
+  }
+};
+
+function testar(caso){
+  const c = CASOS_TESTE[caso];
+  if(!c) return;
+  limpar();
+  const set = (id, v) => { if(v !== '') document.getElementById(id).value = v; };
+  set('ph', c.ph); set('pco2', c.pco2); set('hco3', c.hco3);
+  set('po2', c.po2); set('spo2', c.spo2); set('fio2', c.fio2);
+  set('sodio', c.sodio); set('potassio', c.potassio); set('cloro', c.cloro);
+  set('albumina', c.albumina);
+  if(c.lactato !== '') set('lactato', c.lactato);
+  analisar();
+}
+
+// ── Unidade do lactato ──
+let lacUnit = 'mmol';
+function setLacUnit(u){
+  lacUnit = u;
+  document.getElementById('btn-mmol').classList.toggle('active', u==='mmol');
+  document.getElementById('btn-mgdl').classList.toggle('active', u==='mgdl');
+  document.getElementById('lbl-lac-unit').textContent = u==='mmol' ? 'mmol/L (<2,0)' : 'mg/dL (<18)';
+}
+
+// ── Toggle seção opcional ──
+let opcionalAberto = false;
+function toggleOpcional(){
+  opcionalAberto = !opcionalAberto;
+  document.getElementById('opcional-section').style.display = opcionalAberto ? 'block' : 'none';
+  const btn = document.getElementById('btn-opcional');
+  const span = btn.querySelector('span');
+  span.textContent = opcionalAberto ? '▾ Exames complementares opcionais' : '▸ Exames complementares opcionais';
+  btn.classList.toggle('opt-open', opcionalAberto);
+}
+
+
+// ════════════════════════════════════════════════════════
+// MÓDULO 1: LACTATO
+// ════════════════════════════════════════════════════════
+function calcLactato(lacRaw, unit){
+  if(isNaN(lacRaw)) return null;
+  const mmol = unit === 'mgdl' ? lacRaw / 9 : lacRaw;
+  return mmol;
+}
+
+function renderLactato(lacMmol, lacRaw, unit, agCorr, agAlto, hco3Lo, phAcid){
+  if(lacMmol === null) return '';
+  const lacColor = lacMmol < 2 ? 'green' : lacMmol < 4 ? 'yellow' : 'red';
+  const lacRef    = unit === 'mgdl' ? '(< 18 mg/dL / < 2,0 mmol/L)' : '(< 2,0 mmol/L)';
+  const lacRef4   = unit === 'mgdl' ? '(18–36 mg/dL / 2–4 mmol/L)' : '(2–4 mmol/L)';
+  const lacRef4p  = unit === 'mgdl' ? '(> 36 mg/dL / > 4,0 mmol/L)' : '(> 4,0 mmol/L)';
+  const lacValStr = unit === 'mgdl' ? `${lacRaw} mg/dL (${lacMmol.toFixed(1)} mmol/L)` : `${lacMmol.toFixed(1)} mmol/L`;
+  const lacInterp = lacMmol < 2
+    ? `Normal ${lacRef}`
+    : lacMmol < 4
+      ? `Hiperlactatemia sem acidose lática franca ${lacRef4} — pode ser sinal precoce de hipoperfusão`
+      : `Acidose lática franca ${lacRef4p}`;
+
+  let cruzamentoAG = '';
+  if(agAlto && lacMmol >= 2){
+    cruzamentoAG = `<div style="margin-top:8px;padding:7px 10px;background:var(--panel);border-radius:5px;font-size:11px;color:var(--text)">
+      <b style="color:var(--cyan)">Cruzamento com ânion gap:</b> AG elevado + lactato elevado → consistente com <b>acidose lática</b> como causa predominante do AG. Lembre que o AG tem sensibilidade < 80% para hiperlactatemia — metade dos pacientes com lactato 3–5 mmol/L tem AG dentro da normalidade. O lactato não pode ser substituído pelo AG.
+    </div>`;
+  } else if(agAlto && lacMmol < 2){
+    cruzamentoAG = `<div style="margin-top:8px;padding:7px 10px;background:var(--panel);border-radius:5px;font-size:11px;color:var(--text)">
+      <b style="color:var(--yellow)">AG elevado com lactato normal:</b> acidose lática improvável como causa principal. Investigar cetoacidose, intoxicação por álcoois tóxicos, insuficiência renal avançada, rabdomiólise.
+    </div>`;
+  } else if(!agAlto && lacMmol >= 4){
+    cruzamentoAG = `<div style="margin-top:8px;padding:7px 10px;background:var(--panel);border-radius:5px;font-size:11px;color:var(--text)">
+      <b style="color:var(--yellow)">Lactato elevado com AG normal:</b> reforça a limitação do AG como triagem. Hiperlactatemia real presente — investigar causa mesmo sem AG elevado.
+    </div>`;
+  }
+
+  return `<div class="rb ${lacColor} a d2">
+    <div class="rbl">Lactato sérico</div>
+    <div class="rbt">${lacValStr}</div>
+    <div class="rbs">${lacInterp}</div>
+    ${cruzamentoAG}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// MÓDULO 2: CLORO CORRIGIDO
+// ════════════════════════════════════════════════════════
+function renderCloroCorrigido(na, cl, hco3, alb){
+  if(isNaN(na) || isNaN(cl)) return '';
+  const clCorr = cl * (140 / na);
+  const diff = Math.abs(clCorr - cl);
+  if(diff < 2) return ''; // sem diferença clínica relevante
+
+  const albV = !isNaN(alb) ? alb : 4.0;
+  const agComClCorr = na - (clCorr + hco3) + 2.5*(4.0 - albV);
+  const agComClMedido = na - (cl + hco3) + 2.5*(4.0 - albV);
+  const mudouClassificacao = (agComClCorr > 12) !== (agComClMedido > 12);
+
+  return `<div class="rb panel a" style="border-color:var(--yellow)">
+    <div class="rbl">Cloro corrigido pela natremia</div>
+    <div class="rbt">Cl corrigido = ${clCorr.toFixed(1)} mEq/L <span style="font-size:12px;color:var(--text2)">(medido: ${cl} mEq/L)</span></div>
+    <div class="rbs" style="margin-bottom:8px">
+      <b>Fórmula:</b> Cl medido × (140 ÷ Na medido) = ${cl} × (140 ÷ ${na}) = <b>${clCorr.toFixed(1)}</b><br>
+      <b>Por quê:</b> em hipo ou hipernatremia, o cloro sérico está artificialmente baixo ou alto junto com o sódio. A correção elimina esse efeito de diluição/concentração e revela o cloro "real" em relação à natremia normal.
+    </div>
+    ${mudouClassificacao ? `<div style="background:rgba(255,214,10,0.12);border:1px solid var(--yellow);border-radius:5px;padding:7px 10px;font-size:11px;color:var(--text)">
+      ⚠ <b>A correção muda a classificação do ânion gap!</b> Com o cloro corrigido, o AG passa de <b>${agComClMedido.toFixed(1)}</b> para <b>${agComClCorr.toFixed(1)}</b> mEq/L — ${agComClCorr > 12 ? 'revelando AG elevado que estava mascarado pela hiponatremia' : 'normalizando o AG que estava falsamente elevado pela hipernatremia'}.
+    </div>` : `<div style="font-size:11px;color:var(--text2)">Neste caso, a correção não muda a classificação do AG (${agComClCorr > 12 ? 'permanece elevado' : 'permanece normal'}), mas a diferença de ${diff.toFixed(1)} mEq/L é relevante em contexto de distúrbio misto.</div>`}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// MÓDULO 3: K⁺ E pH
+// ════════════════════════════════════════════════════════
+function renderKpH(ph, k, hco3){
+  if(isNaN(k)) return '';
+  const phAcid = ph <= 7.35, phAlc = ph >= 7.45;
+  if(!phAcid && !phAlc) return '';
+
+  // K esperado: cada 0.1 de queda no pH → K sobe ~0.5
+  const deltaPhDe74 = 7.4 - ph;
+  const kEsperadoDelta = deltaPhDe74 * 5; // 0.5 por 0.1 de pH
+  const kEsperado = (4.0 + kEsperadoDelta).toFixed(1);
+
+  let nota = '';
+  let color = 'panel';
+
+  if(phAcid){
+    if(k < 3.5){
+      nota = `<b style="color:var(--red)">⚠ Hipocalemia na acidemia — sinal de alerta crítico.</b> Na acidose, H⁺ entra na célula trocando K⁺ para fora — o K⁺ sérico deveria estar <i>elevado ou normal</i>. K⁺ baixo na acidose significa que o estoque intracelular está gravemente depletado. Com a correção da acidose, o K⁺ sérico vai <b>cair</b> — o H⁺ sai da célula e o K⁺ volta para dentro. Se o K⁺ já está baixo agora com acidose, o déficit intracelular é grave e a queda será ainda maior durante o tratamento. <b>Clássico na cetoacidose diabética:</b> K⁺ pode parecer normal ou alto na chegada, mas cai drasticamente com insulina + hidratação — repor potássio antes ou junto com insulina.`;
+      color = 'red';
+    } else if(k > 5.5){
+      const kExcessoAcidose = (kEsperado - 4.0).toFixed(1);
+      nota = `K⁺ elevado na acidemia tem componente fisiológico esperado (H⁺ entra na célula, K⁺ sai — estimativa: ~${kEsperado} mEq/L para este pH). Porém <b>hipercalemia verdadeira adicional é completamente possível</b> e deve ser considerada. Causas:<br>
+        • <b>Reposição excessiva de K⁺</b> (iatrogênica — a mais comum em UTI)<br>
+        • <b>Insuficiência renal</b> — retém K⁺ independente do pH<br>
+        • <b>Rabdomiólise</b> — libera K⁺ intracelular em grande quantidade<br>
+        • <b>Hipoaldosteronismo</b> (diabetes + nefropatia, IECA/BRA, insuficiência adrenal)<br>
+        • <b>Hemólise</b> de amostra — checar se K⁺ sanguíneo é real ou artefato<br>
+        • <b>Síndrome de lise tumoral</b><br>
+        O efeito do pH explica parte do K⁺ elevado, mas não isenta de investigar hipercalemia verdadeira se o valor for desproporcional.`;
+      color = 'yellow';
+    } else {
+      nota = `K⁺ dentro da faixa esperada para o grau de acidemia. Na acidose, H⁺ entra na célula trocando K⁺ para fora — cada queda de 0,1 no pH eleva o K⁺ sérico ~0,5 mEq/L. Estimativa com pH ${ph.toFixed(2)}: K⁺ esperado ~${kEsperado} mEq/L.`;
+      color = 'panel';
+    }
+  } else if(phAlc){
+    if(k < 3.0){
+      nota = `<b style="color:var(--yellow)">Hipocalemia na alcalose.</b> Na alcalose, H⁺ sai da célula e K⁺ entra — o K⁺ sérico cai. Hipocalemia grave (< 3,0) pode <i>perpetuar</i> a alcalose metabólica: o rim prefere excretar H⁺ para reabsorver K⁺, mantendo o HCO₃⁻ elevado. <b>Não corrigir a alcalose sem repor potássio simultaneamente.</b>`;
+      color = 'yellow';
+    } else {
+      nota = `Na alcalose, H⁺ sai da célula e K⁺ entra — o K⁺ sérico cai. Estimativa: com pH ${ph.toFixed(2)}, o K⁺ esperado seria ~${kEsperado} mEq/L. Ao corrigir a alcalose, o processo se inverte e o K⁺ sérico <b>sobe</b> — monitorar durante o tratamento.`;
+      color = 'panel';
+    }
+  }
+
+  return `<div class="rb ${color} a">
+    <div class="rbl">Potássio × pH</div>
+    <div class="rbt">K⁺ = ${k} mEq/L com pH ${ph.toFixed(2)}</div>
+    <div class="rbs">${nota}</div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// MÓDULO 4: GRADIENTE A-a
+// ════════════════════════════════════════════════════════
+function renderGradAa(pao2, pco2, fio2, idade, arterial, phAlc){
+  if(!arterial || isNaN(pao2) || isNaN(pco2) || isNaN(fio2)) return '';
+  const frac = fio2 > 1 ? fio2/100 : fio2;
+  // Fórmula completa: FiO2×(760-47) - PaO2 - PaCO2/0.8
+  const pao2_alveolar = frac * 713 - pco2 / 0.8;
+  const gradAa = pao2_alveolar - pao2;
+
+  // Limite normal ajustado por idade
+  const idadeV = !isNaN(idade) ? idade : 40;
+  // Limiar clínico mais realista — fórmula (idade/4)+4 tende a ser muito restritiva
+  // Na prática aceita-se ~20 mmHg em adultos jovens, ~25 em meia-idade, ~30 em idosos
+  const limiteNormal = idadeV <= 30 ? 15 : idadeV <= 50 ? 20 : idadeV <= 70 ? 25 : 30;
+  const limiteIdade = `≤ ${limiteNormal} mmHg para ${idadeV} anos`;
+  // Tolerância clínica de 5 mmHg — diferenças menores que isso raramente têm significado
+  const toleranciaClinica = 5;
+  const elevado = gradAa > limiteNormal + toleranciaClinica;
+
+  let interp = '', cor = 'panel';
+  const hiperventilando = pco2 < 35;
+  const margem5 = 5; // tolerância clínica
+  if(!elevado && gradAa <= limiteNormal){
+    interp = `Gradiente normal (${limiteIdade}). Sem evidência de comprometimento nas trocas gasosas.`;
+  } else if(!elevado && gradAa > limiteNormal){
+    // Dentro da tolerância clínica de 5 mmHg
+    interp = `Gradiente de <b>${gradAa.toFixed(0)} mmHg</b> — levemente acima do limite teórico (${limiteIdade}) mas dentro da margem de tolerância clínica (±5 mmHg). <b>Sem significado clínico isolado.</b> Não é possível afirmar doença pulmonar com base neste valor — correlacionar com clínica, SpO₂ e RX.`;
+  } else if(hiperventilando){
+    // Gradiente elevado mas PCO2 baixa — pode ser artefato da hiperventilação
+    const gradSemHipervent = (0.21 * 713 - pao2 - 40/0.8); // estimativa com PCO2 normal
+    // Em alcalose respiratória primária, usar margem ampliada pois há outros fatores
+    // que afetam o gradiente além da hiperventilação compensatória
+    const margemHipervent = phAlc ? limiteNormal + 15 : limiteNormal;
+    const elevadoSemHipervent = gradSemHipervent > margemHipervent;
+    if(!elevadoSemHipervent){
+      interp = `Gradiente A-a de <b>${gradAa.toFixed(0)} mmHg</b> — acima do valor de referência calculado (${limiteIdade}), mas <b style="color:var(--cyan)">provavelmente artefato da hiperventilação</b>. Com PCO₂ de ${pco2} mmHg a pressão alveolar de O₂ sobe artificialmente na fórmula. Estimando com PCO₂ de 40 mmHg, o gradiente seria ~${gradSemHipervent.toFixed(0)} mmHg — dentro do esperado para a idade. <b>Não há evidência de doença pulmonar por este parâmetro.</b> Se o paciente oxigena bem em ar ambiente com SpO₂ e PaO₂ normais, o pulmão provavelmente está funcionando adequadamente.`;
+      cor = 'panel';
+    } else {
+      // Mesmo sem hiperventilação o gradiente estaria elevado — doença pulmonar mais provável
+      // Mas adicionar margem: se gradSemHipervent está entre limiteNormal e limiteNormal+10 — borderline
+      const borderline = gradSemHipervent <= margemHipervent + 10;
+      if(borderline){
+        interp = `Gradiente A-a de <b>${gradAa.toFixed(0)} mmHg</b>. Parte da elevação é artefato da hiperventilação (PCO₂ ${pco2} mmHg)${phAlc?' e do desvio da curva de dissociação da hemoglobina pela alcalose (efeito Bohr)':''}. Estimando com PCO₂ normal: ~${gradSemHipervent.toFixed(0)} mmHg — limítrofe no contexto de hiperventilação${phAlc?' e alcalose':''}. <b style="color:var(--yellow)">Resultado inconclusivo</b> — correlacionar com clínica, RX e oximetria. Gradiente neste contexto não deve ser interpretado isoladamente como doença pulmonar.`;
+        cor = 'yellow';
+      } else {
+        interp = `<b>Gradiente elevado</b> mesmo descontando o efeito da hiperventilação (estimativa com PCO₂ normal: ~${gradSemHipervent.toFixed(0)} mmHg, normal ${limiteIdade}). <b>Doença parenquimatosa ou distúrbio V/Q provável.</b>`;
+        cor = 'yellow';
+      }
+    }
+  } else {
+    interp = `<b>Gradiente elevado</b> (normal ${limiteIdade}). Há uma barreira nas trocas gasosas entre o alvéolo e o sangue. Isso aponta para <b>doença parenquimatosa pulmonar ou distúrbio V/Q</b> (pneumonia, SDRA, TEP, edema pulmonar) — a hipoventilação não é a causa isolada.`;
+    cor = 'yellow';
+  }
+
+  return `<div class="rb ${cor} a">
+    <div class="rbl">Gradiente Alvéolo-arterial de O₂ (A-a)</div>
+    <div class="rbt">A-a = ${gradAa.toFixed(0)} mmHg</div>
+    <div class="rbs" style="margin-bottom:8px">
+      <b>Fórmula:</b> FiO₂ × 713 − PaO₂ − PaCO₂ ÷ 0,8<br>
+      = ${(frac*100).toFixed(0)}% × 713 − ${pao2} − ${pco2} ÷ 0,8 = <b>${gradAa.toFixed(0)} mmHg</b>
+    </div>
+    <div class="rbs" style="margin-bottom:8px">${interp}</div>
+    <div style="background:var(--panel);border-radius:5px;padding:10px 12px;font-size:11px;color:var(--text);line-height:1.65">
+      <b style="color:var(--cyan)">O que é o gradiente A-a e por que ele importa?</b><br><br>
+      O alvéolo tem uma certa pressão de O₂ — calculada pela fórmula acima com base na FiO₂ e na PCO₂. O sangue que sai do pulmão deveria ter uma pressão de O₂ muito próxima disso. A diferença entre as duas é o gradiente A-a.<br><br>
+      <b>Pense assim:</b> é como medir a temperatura de uma torneira e depois medir a água que sai do chuveiro. Se a diferença for pequena, o cano está limpo — o O₂ passou bem. Se a diferença for grande, tem algo no caminho impedindo a transferência: líquido no pulmão, pus, colapso de alvéolos, ou sangue que passou sem passar pelo alvéolo (shunt).<br><br>
+      <b style="color:var(--cyan)">Gradiente normal → problema fora do pulmão.</b> O O₂ chegou ao alvéolo e passou normalmente para o sangue. O problema está antes: o paciente está simplesmente ventilando pouco (sedação, doença neuromuscular, obesidade) — o pulmão em si funciona.<br><br>
+      <b style="color:var(--red)">Gradiente elevado → problema dentro do pulmão.</b> O O₂ está no alvéolo mas não consegue chegar ao sangue adequadamente. Causas: alvéolos cheios de líquido ou pus (pneumonia, edema), alvéolos colabados (atelectasia), sangue passando por regiões não ventiladas (shunt), ou vaso obstruído sem trocar gás (TEP).<br><br>
+      <b>Referência por idade:</b> o gradiente aumenta ~2 mmHg por década — pulmões envelhecidos têm mais desigualdade ventilação-perfusão fisiológica.
+    </div>
+    ${elevado ? `<div style="margin-top:8px;font-size:11px;color:var(--text)">
+      <b style="color:var(--cyan)">DDx para gradiente elevado:</b><br>
+      <span style="color:var(--text2)">• Pneumonia, SDRA, edema pulmonar cardiogênico<br>
+      • Tromboembolismo pulmonar (V/Q mismatch)<br>
+      • Atelectasia, contusão pulmonar<br>
+      • Shunt intracardíaco (CIA, CIV)<br>
+      • Fibrose pulmonar, pneumonite intersticial</span>
+    </div>` : `<div style="margin-top:8px;font-size:11px;color:var(--text2)">
+      <b>Causas de hipoventilação com gradiente normal:</b> depressão do SNC (sedação, AVC), doenças neuromusculares (Guillain-Barré, miastenia), hipotireoidismo grave, obesidade hipoventilação, DPOC com auto-PEEP.
+    </div>`}
+  <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text2);line-height:1.5;font-style:italic">
+    ⚠ O gradiente A-a é um <b style="color:var(--text)">parâmetro de raciocínio</b>, não um diagnóstico. Doença pulmonar só existe com suspeita ou quadro clínico compatível — correlacionar com clínica, RX e contexto antes de qualquer conclusão.
+  </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// MÓDULO 5: GAP OSMOLAR SÉRICO
+// ════════════════════════════════════════════════════════
+function renderGapOsmolar(na, glicemia, ureia, osmMedida, agAlto){
+  if(isNaN(na)||isNaN(glicemia)||isNaN(ureia)||isNaN(osmMedida)) return '';
+  // Fórmula: 2×Na + glicose/18 + ureia/2.8
+  const osmCalc = 2*na + glicemia/18 + ureia/2.8;
+  const gap = osmMedida - osmCalc;
+  const elevado = gap > 10;
+
+  let interp = '', cor = 'panel';
+  if(!elevado){
+    interp = 'Gap osmolar normal (≤ 10 mOsm/kg). Sem evidência de substância osmoticamente ativa não contabilizada. Intoxicação por álcoois tóxicos improvável.';
+  } else {
+    interp = `<b>Gap osmolar elevado (${gap.toFixed(0)} mOsm/kg, normal ≤ 10).</b> Há substâncias osmoticamente ativas no plasma que não estão sendo medidas pelo sódio, glicose e ureia. ${agAlto ? '<b style="color:var(--red)">Com AG elevado presente → suspeitar fortemente de intoxicação por álcoois tóxicos.</b>' : 'AG não elevado — considerar etanol, manitol, contraste iodado, ou propofol em altas doses.'}`;
+    cor = agAlto ? 'red' : 'yellow';
+  }
+
+  return `<div class="rb ${cor} a">
+    <div class="rbl">Gap Osmolar Sérico</div>
+    <div class="rbt">Gap = ${gap.toFixed(0)} mOsm/kg</div>
+    <div class="rbs" style="margin-bottom:8px">
+      <b>Osmolalidade calculada:</b> 2×${na} + ${glicemia}/18 + ${ureia}/2,8 = <b>${osmCalc.toFixed(0)}</b> mOsm/kg<br>
+      <b>Osmolalidade medida:</b> ${osmMedida} mOsm/kg → <b>Gap = ${gap.toFixed(0)}</b>
+    </div>
+    <div class="rbs" style="margin-bottom:8px">${interp}</div>
+    <div style="background:var(--panel);border-radius:5px;padding:8px 10px;font-size:11px;color:var(--text)">
+      <b style="color:var(--cyan)">Analogia:</b> a osmolalidade calculada é como somar os ingredientes conhecidos de uma receita. Se o bolo pesou mais do que a soma dos ingredientes, tem algo não declarado. O gap osmolar é esse "ingrediente extra" — pode ser etanol, metanol, etilenoglicol ou outros osmóis exógenos.<br><br>
+      <b style="color:var(--yellow)">⚠ Limitação importante:</b> o gap osmolar normal na população geral tem faixa ampla (−10 a +10 mOsm/kg). Um gap de 12 pode ser normal para aquele paciente. Além disso, nas intoxicações por metanol e etilenoglicol, o gap é alto no início (álcool ainda circulante), mas pode normalizar horas depois quando já foi metabolizado — enquanto o AG ainda está alto pelos metabólitos tóxicos. Contexto clínico é essencial.
+    </div>
+    ${elevado ? `<div style="margin-top:8px;font-size:11px;color:var(--text)">
+      <b style="color:var(--cyan)">Causas de gap osmolar elevado:</b><br>
+      <span style="color:var(--text2)">• Etanol (cada 100 mg/dL eleva ~22 mOsm/kg)<br>
+      • Metanol, etilenoglicol (anticongelante), propilenoglicol (lorazepam IV em altas doses)<br>
+      • Isopropanol (álcool de limpeza — eleva gap mas NÃO gera AG elevado)<br>
+      • Manitol, contraste iodado, glicerol<br>
+      • Acidose lática grave e cetoacidose alcoólica podem elevar moderadamente</span>
+    </div>` : ''}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// MÓDULO 6: ÂNION GAP URINÁRIO
+// ════════════════════════════════════════════════════════
+function renderAGU(na_u, k_u, cl_u, ph_u, osm_u_medida, ureia_u, glic_u, hco3Lo, agNormal, k){
+  if(isNaN(na_u)||isNaN(k_u)||isNaN(cl_u)) return '';
+  if(!hco3Lo && !agNormal) return ''; // só relevante na acidose metabólica com AG normal
+
+  const agu = na_u + k_u - cl_u;
+  const negativo = agu < 0;
+  const phULimitado = !isNaN(ph_u) && ph_u > 6.5;
+  const naUBaixo = na_u < 20;
+
+  let confiavel = true;
+  let avisoConfiabilidade = '';
+  if(phULimitado){
+    confiavel = false;
+    avisoConfiabilidade += `<div style="color:var(--yellow);margin-top:5px">⚠ pH urinário > 6,5 (${ph_u}): o AG urinário é <b>não confiável</b> nessa situação — bicarbonato urinário passa a ser o ânion principal, não o cloreto. Usar gap osmolar urinário se disponível.</div>`;
+  }
+  if(naUBaixo){
+    confiavel = false;
+    avisoConfiabilidade += `<div style="color:var(--yellow);margin-top:5px">⚠ Na⁺ urinário < 20 mEq/L (${na_u}): entrega distal de sódio insuficiente compromete a acidificação urinária. AG urinário pode ser falsamente positivo.</div>`;
+  }
+
+  let interp = '', cor = 'panel';
+  if(!confiavel){
+    interp = `AG urinário calculado = <b>${agu.toFixed(0)} mEq/L</b>, mas a confiabilidade está comprometida pelas condições abaixo.`;
+    cor = 'yellow';
+  } else if(negativo){
+    interp = `<b>AG urinário negativo (${agu.toFixed(0)} mEq/L)</b> → rim excretando NH₄⁺ normalmente → causa <b>extra-renal</b>.`;
+    cor = 'green';
+  } else {
+    interp = `<b>AG urinário positivo (${agu.toFixed(0)} mEq/L)</b> → rim não consegue excretar NH₄⁺ adequadamente → causa <b>renal</b> (acidose tubular renal ou insuficiência renal).`;
+    cor = 'red';
+  }
+
+  let ddxAGU = '';
+  if(confiavel && negativo){
+    ddxAGU = `<div style="margin-top:8px;font-size:11px;color:var(--text)">
+      <b style="color:var(--green)">Causas extra-renais (rim acidifica bem):</b><br>
+      <span style="color:var(--text2)">• Diarreia, fístulas gastrointestinais<br>
+      • Infusão de grande volume de salina normal<br>
+      • ATR proximal (tipo 2) — acidificação distal preservada<br>
+      • Fase inicial da acidose tubular renal tipo 2</span>
+    </div>`;
+  } else if(confiavel && !negativo){
+    // Refinar com K+ sérico e pH urinário
+    const kBaixo = !isNaN(k) && k < 3.5;
+    const kAlto = !isNaN(k) && k > 5.0;
+    const phUAlto = !isNaN(ph_u) && ph_u > 5.5;
+    ddxAGU = `<div style="margin-top:8px;font-size:11px;color:var(--text)">
+      <b style="color:var(--red)">Causa renal — refinamento pelo K⁺ sérico e pH urinário:</b><br>
+      <div style="background:var(--panel);border-radius:5px;padding:7px 10px;margin-top:5px">
+        ${kBaixo && phUAlto ? `<b style="color:var(--cyan)">ATR tipo 1 (distal):</b> K⁺ baixo + pH urinário > 5,5. O rim não consegue criar gradiente de H⁺ no túbulo distal — urina não acidifica mesmo com acidemia. Causas: anfotericina B, lítio, síndrome de Sjögren.` :
+          kAlto && phUAlto ? `<b style="color:var(--cyan)">ATR tipo 4 (hipoaldosteronismo):</b> K⁺ elevado + pH urinário > 5,5. Aldosterona insuficiente → rim retém K⁺ e não excreta H⁺. Causas: diabetes + nefropatia, IECA/BRA em nefropatas, insuficiência adrenal.` :
+          `K⁺ sérico e pH urinário disponíveis ajudam a diferenciar:<br>
+          • K⁺ baixo + pH > 5,5 → ATR tipo 1 (distal)<br>
+          • K⁺ elevado + pH > 5,5 → ATR tipo 4 (hipoaldosteronismo)<br>
+          • Insuficiência renal avançada (FG < 20 mL/min) cursa com AG urinário positivo e K⁺ elevado`}
+      </div>
+    </div>`;
+  }
+
+  // ── Gap osmolar urinário ──
+  let gapOsmUrHtml = '';
+  if(!isNaN(osm_u_medida) && !isNaN(ureia_u)){
+    const glomCalc = !isNaN(glic_u) && glic_u > 0
+      ? 2*(na_u + k_u) + ureia_u/2.8 + glic_u/18
+      : 2*(na_u + k_u) + ureia_u/2.8;
+    const gapOsmUr = osm_u_medida - glomCalc;
+    const gapBaixo = gapOsmUr < 40;
+    gapOsmUrHtml = `<div style="background:var(--panel);border-left:3px solid ${gapBaixo?'var(--red)':'var(--green)'};border-radius:5px;padding:9px 12px;margin-top:8px;font-size:11px;color:var(--text)">
+      <b style="color:var(--cyan)">Gap Osmolar Urinário = ${gapOsmUr.toFixed(0)} mOsm/kg</b>
+      (calculado: ${glomCalc.toFixed(0)}, medido: ${osm_u_medida})<br><br>
+      ${gapBaixo
+        ? `<b style="color:var(--red)">< 40 mOsm/kg → Excreção de NH₄⁺ comprometida → causa RENAL.</b> O rim não está conseguindo eliminar o ácido na urina. Mesmo que o AGU fosse pouco confiável aqui, o gap osmolar urinário confirma a falha renal na acidificação.`
+        : `<b style="color:var(--green)">≥ 40 mOsm/kg → Excreção de NH₄⁺ preservada → causa EXTRA-RENAL.</b> O rim está funcionando — está excretando amônio normalmente. A acidose vem de fora (diarreia, fístula, infusão de salina).`}
+      <br><br>
+      <b style="color:var(--cyan)">Por que é mais confiável que o AGU em alguns casos:</b> o gap osmolar urinário mede diretamente o NH₄⁺ por diferença osmótica, sem depender do Cl⁻ como ânion acompanhante. Quando o NH₄⁺ é excretado com outro ânion (cetoácidos, salicilato, penicilina) ou quando o pH_u é alto, o AGU falha — mas o gap osmolar ainda reflete o NH₄⁺ total.
+    </div>`;
+  } else if(phULimitado || naUBaixo){
+    gapOsmUrHtml = `<div style="background:rgba(255,214,10,0.08);border:1px solid var(--yellow);border-radius:5px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text2)">
+      💡 Para contornar a limitação do AGU, solicite: <b>osmolalidade urinária medida + ureia urinária</b> e insira acima para calcular o gap osmolar urinário — mais confiável nesta situação.
+    </div>`;
+  }
+
+  return `<div class="rb ${cor} a">
+    <div class="rbl">Ânion Gap Urinário</div>
+    <div class="rbt">AGU = Na⁺u + K⁺u − Cl⁻u = ${na_u} + ${k_u} − ${cl_u} = <b>${agu.toFixed(0)} mEq/L</b></div>
+    <div class="rbs" style="margin-bottom:8px">
+      <b>Por que calcular:</b> na acidose metabólica com AG normal, o rim deveria estar excretando NH₄⁺ (amônio) para compensar. O NH₄⁺ não é medido diretamente, mas é excretado com Cl⁻ — quando o rim funciona bem, o Cl⁻ urinário aumenta e o AG urinário fica negativo. Se o rim está falhando, o Cl⁻ não sobe e o AG permanece positivo.
+    </div>
+    <div class="rbs" style="margin-bottom:6px">
+      <b style="color:var(--cyan)">Analogia:</b> é como verificar se o caminhão de lixo passou. O NH₄⁺ é o lixo ácido. Se passou (causa extra-renal), o cloro urinário está alto e o AG urinário é negativo. Se não passou (causa renal), o cloro é baixo e o AG é positivo.
+    </div>
+    <div class="rbs">${interp}</div>
+    ${avisoConfiabilidade}
+    ${ddxAGU}
+    ${gapOsmUrHtml}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// MÓDULO 7: AG BAIXO OU NEGATIVO
+// ════════════════════════════════════════════════════════
+function renderAGBaixo(agCorr, na, cl, hco3){
+  if(isNaN(agCorr) || agCorr >= 3) return '';
+  return `<div class="rb yellow a">
+    <div class="rbl">Ânion Gap Baixo ou Negativo</div>
+    <div class="rbt">AG corrigido = ${agCorr.toFixed(1)} mEq/L</div>
+    <div class="rbs">AG < 3 mEq/L é incomum e merece atenção. Causas possíveis:</div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text)">
+      • <b>Hiperproteinemia com cátions não medidos:</b> gamopatia monoclonal IgG (proteína carregada positivamente reduz o AG)<br>
+      • <b>Toxicidade por lítio</b> — lítio é um cátion não medido que reduz o AG<br>
+      • <b>Hipercalcemia ou hipermagnesemia graves</b> — cátions extras reduzem o AG<br>
+      • <b>Pseudo-hipercloremia:</b> intoxicação por brometo ou iodeto (interferência na dosagem de cloro pelo método colorimétrico)<br>
+      • <b>Hipoalbuminemia muito grave</b> — já corrigida aqui pela albumina, mas pode superestimar a correção
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// MÓDULO 8: DELTA RATIO COM REFINAMENTO LÁTICO
+// ════════════════════════════════════════════════════════
+function calcDeltaRatioRefinado(agCorr, hco3, lacMmol){
+  const dAG = agCorr - 12;
+  const dHCO3 = 24 - hco3;
+  if(dHCO3 <= 0) return null;
+
+  const usarFatorLatico = lacMmol !== null && lacMmol >= 4;
+  const fator = usarFatorLatico ? 0.6 : 1.0;
+  // Fórmula ajustada: (fator × dAG) / dHCO3
+  // Para ketoacidose: dAG/dHCO3 (fator 1.0)
+  // Para lática: 0.6×dAG/dHCO3
+  const dr = (fator * dAG) / dHCO3;
+  return { dr, usarFatorLatico, dAG, dHCO3, fator };
+}
+
+
+// ════════════════════════════════════════════════════════
+// SÍNTESE FINAL
+// ════════════════════════════════════════════════════════
+function gerarSintese(dTit, cDev, agAlto2, agCorr, hco3Lo, co2Hi, co2Lo, hco3Hi, duploDist, lacMmol, k, ph, pfHtml, aguHtml, gradAaHtml, gapOsmHtml){
+  const partes = [];
+
+  // Distúrbio principal
+  partes.push(`<b style="color:var(--cyan)">${dTit}</b>`);
+
+  // Componente AG
+  if(agAlto2===true && duploDist){
+    partes.push('com duplo mecanismo de acidose metabólica: <b>ânion gap elevado</b> e <b>ânion gap normal associado</b>');
+  } else if(agAlto2===true){
+    partes.push('com <b>ânion gap elevado</b>');
+  } else if(agAlto2===false && hco3Lo){
+    partes.push('com <b>ânion gap normal</b> (hiperclorêmica)');
+  }
+
+  // Lactato
+  if(lacMmol!==null){
+    if(lacMmol>=4) partes.push(`<b style="color:var(--red)">acidose lática franca (lactato ${lacMmol.toFixed(1)} mmol/L)</b>`);
+    else if(lacMmol>=2) partes.push(`hiperlactatemia (${lacMmol.toFixed(1)} mmol/L)`);
+    else if(agAlto2===true) partes.push(`lactato normal — investigar outras causas de AG elevado`);
+  }
+
+  // Compensação — lógica determinística baseada no distúrbio primário e direção do desvio
+  if(cDev){
+    if(cDev.includes('\u2713')){
+      partes.push('com <b>compensação adequada</b>');
+    } else {
+      const primMetabAcid = hco3Lo && !co2Hi;
+      const primMetabAlc  = hco3Hi && !co2Lo;
+      const primRespAcid  = co2Hi  && !hco3Lo;
+      const primRespAlc   = co2Lo  && !hco3Hi;
+
+      if(primMetabAcid || primMetabAlc){
+        if(cDev.includes('acima')) partes.push('com <b>acidose respiratória associada</b> — PCO\u2082 acima do esperado');
+        else if(cDev.includes('abaixo')) partes.push('com <b>alcalose respiratória associada</b> — PCO\u2082 abaixo do esperado');
+      } else if(primRespAcid){
+        if(cDev.includes('acima')) partes.push('com <b>alcalose metabólica associada</b> — HCO\u2083\u207b acima do esperado');
+        else if(cDev.includes('abaixo')) partes.push('com <b>acidose metabólica associada</b> — HCO\u2083\u207b abaixo do esperado');
+      } else if(primRespAlc){
+        if(cDev.includes('acima')) partes.push('com <b>alcalose metabólica associada</b> — HCO\u2083\u207b acima do esperado');
+        else if(cDev.includes('abaixo')) partes.push('com <b>acidose metabólica associada</b> — HCO\u2083\u207b abaixo do esperado');
+      }
+    }
+  }
+
+  // K⁺
+  if(!isNaN(k)){
+    if(k<3.0) partes.push(`<b style="color:var(--yellow)">hipocalemia importante (K⁺ ${k} mEq/L) — atenção ao déficit intracelular</b>`);
+    else if(k>5.5 && ph<7.35){
+      const kExpPh = (4.0 + (7.4-ph)*5).toFixed(1);
+      if(k > +kExpPh + 0.8) partes.push(`<b style="color:var(--yellow)">hipercalemia (K⁺ ${k} mEq/L) — excede o esperado pelo pH (${kExpPh}), investigar causa adicional</b>`);
+      else partes.push(`K⁺ ${k} mEq/L — elevado proporcionalmente à acidemia`);
+    }
+  }
+
+  // Exames adicionais com achados relevantes
+  const extras = [];
+  // Gradiente A-a — só mencionar na síntese quando genuinamente elevado
+  const gradElevadoReal = gradAaHtml
+    && gradAaHtml.includes('Gradiente elevado')
+    && !gradAaHtml.includes('artefato')
+    && !gradAaHtml.includes('inconclusivo')
+    && !gradAaHtml.includes('tolerância')
+    && !gradAaHtml.includes('Sem significado')
+    && !gradAaHtml.includes('Sem evidência')
+    && !gradAaHtml.includes('Gradiente de <b>');
+  if(gradElevadoReal){
+    extras.push('gradiente A-a elevado — possível comprometimento das trocas gasosas; correlacionar com clínica e RX');
+  } else if(gradAaHtml && gradAaHtml.includes('artefato')){
+    extras.push('gradiente A-a: elevação relacionada à hiperventilação, sem evidência de doença pulmonar');
+  } else if(gradAaHtml && gradAaHtml.includes('inconclusivo')){
+    extras.push('gradiente A-a inconclusivo — correlacionar com clínica');
+  }
+  if(gapOsmHtml && gapOsmHtml.includes('elevado')) extras.push('gap osmolar elevado (investigar substância exógena)');
+  // Síntese AGU: mencionar apenas o resultado do caso, não as duas possibilidades
+  if(aguHtml){
+    // Detectar pelo texto exato que renderAGU produz (minúsculo, com tags HTML)
+    if(aguHtml.includes('causa <b>renal</b>')){
+      extras.push('ânion gap urinário <b>positivo</b> — causa renal (acidose tubular renal ou insuficiência renal)');
+    } else if(aguHtml.includes('causa <b>extra-renal</b>')){
+      extras.push('ânion gap urinário <b>negativo</b> — causa extra-renal (diarreia, fístula, salina)');
+    } else if(aguHtml.includes('causa RENAL')){
+      // gap osmolar urinário confirmou causa renal
+      extras.push('gap osmolar urinário confirma <b>causa renal</b> — excreção de NH₄⁺ comprometida');
+    } else if(aguHtml.includes('causa EXTRA-RENAL')){
+      extras.push('gap osmolar urinário confirma <b>causa extra-renal</b> — rim excretando NH₄⁺ normalmente');
+    } else if(aguHtml.includes('comprometida') || aguHtml.includes('limitada')){
+      extras.push('ânion gap urinário com confiabilidade limitada — considerar gap osmolar urinário');
+    }
+  }
+  if(extras.length) partes.push(extras.join(', '));
+
+  // Montar frase
+  const texto = partes.join(', ');
+
+  return `<div style="background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:14px 16px;margin-top:4px;margin-bottom:10px">
+    <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin-bottom:8px">Síntese da Interpretação</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.7">${texto}.</div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text2)">Os diagnósticos diferenciais listados acima devem ser <b style="color:var(--text)">investigados e cogitados ativamente</b> para a elucidação do caso — a gasometria orienta o raciocínio, mas a definição etiológica depende da correlação com a clínica, história e exames complementares.</div>
+  </div>`;
+}
+
+
+// ════════════════════════════════════════════════════════
+// MÓDULO: SÓDIO — hipo/hipernatremia
+// ════════════════════════════════════════════════════════
+function renderSodio(na, naCorrigido, glicSerica){
+  // Calcular Na corrigido antes de decidir se exibe
+  let naCorrigidoHtml = '';
+  if(!isNaN(glicSerica) && glicSerica > 100 && !isNaN(na)){
+    const correcao = (1.6 * (glicSerica - 100) / 100).toFixed(1);
+    const naC = naCorrigido.toFixed(1);
+    const hipoMascarada = na < 135 && naCorrigido >= 135;
+    const hipoReal = naCorrigido < 135;
+    naCorrigidoHtml = `<div style="background:var(--panel2);border:1px solid var(--border2);border-radius:7px;padding:10px 14px;margin-bottom:10px" class="a">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin-bottom:6px">Sódio Corrigido pela Glicemia</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:5px">Na corrigido = <span style="color:var(--cyan)">${naC} mEq/L</span></div>
+      <div style="font-size:11px;color:var(--text);line-height:1.6;margin-bottom:6px">
+        <b>Fórmula:</b> Na medido + 1,6 × (Glicemia − 100) ÷ 100 = ${na} + 1,6 × (${glicSerica} − 100) ÷ 100 = <b>${naC} mEq/L</b>
+      </div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.6">
+        <b style="color:var(--text)">Por quê corrigir?</b> A hiperglicemia puxa água do intracelular para o plasma, diluindo o sódio. Cada 100 mg/dL de glicemia acima de 100 reduz o Na sérico em ~1,6 mEq/L. O Na medido pode estar falsamente baixo — o Na corrigido reflete a natremia real quando a glicemia for tratada.
+      </div>
+      ${hipoMascarada ? `<div style="background:rgba(255,214,10,0.10);border:1px solid var(--yellow);border-radius:5px;padding:7px 10px;margin-top:8px;font-size:11px;color:var(--text)">⚠ <b>Pseudo-hiponatremia dilucional:</b> o Na medido (${na} mEq/L) parece baixo, mas o Na corrigido é ${naC} mEq/L — <b>dentro da normalidade</b>. Não há hiponatremia real. Tratar a hiperglicemia normalizará o sódio.</div>` : ''}
+      ${hipoReal && naCorrigido > na ? `<div style="background:rgba(255,59,48,0.08);border:1px solid var(--red);border-radius:5px;padding:7px 10px;margin-top:8px;font-size:11px;color:var(--text)">⚠ <b>Hiponatremia real mesmo após correção</b> (Na corrigido ${naC} mEq/L). Investigar outras causas além da hiperglicemia.</div>` : ''}
+    </div>`;
+  }
+
+  if(isNaN(na)) return naCorrigidoHtml || '';
+  // Se Na normal e sem glicemia: retornar vazio; se tem Na corrigido: mostrar apenas esse bloco
+  if(na >= 135 && na <= 145){
+    // Na normal — só mostrar se há Na corrigido relevante
+    return naCorrigidoHtml;
+  }
+
+  const hipo = na < 135;
+  const grave = hipo ? na < 125 : na > 155;
+  const cor = grave ? 'red' : 'yellow';
+
+  let titulo, subtitulo, ddx, orientacao;
+
+  if(hipo){
+    titulo = `Hiponatremia — Na⁺ ${na} mEq/L`;
+    subtitulo = na < 125 ? 'Grave (< 125 mEq/L)' : na < 130 ? 'Moderada (125–129 mEq/L)' : 'Leve (130–134 mEq/L)';
+
+    ddx = `
+      <div class="ddxg" style="color:var(--yellow)">Hiponatremia hipovolêmica (Na e água perdidos, mais Na)</div>
+      <div class="ddxi">Perdas gastrointestinais: vômitos, diarreia, fístulas, aspiração nasogástrica</div>
+      <div class="ddxi">Perdas renais: diuréticos (tiazídicos > de alça), nefropatia perdedora de sal, insuficiência adrenal</div>
+      <div class="ddxi">Perdas para terceiro espaço: pancreatite, queimaduras, peritonite</div>
+
+      <div class="ddxg" style="color:var(--cyan);margin-top:8px">Hiponatremia euvolêmica (água retida sem edema)</div>
+      <div class="ddxi"><b>SIADH</b> (síndrome da secreção inapropriada de ADH) — causa mais comum: pneumonia, neoplasias (pulmão), SNC, medicamentos (carbamazepina, SSRIs, PPIs, opioides, ciclofosfamida)</div>
+      <div class="ddxi">Hipotireoidismo grave</div>
+      <div class="ddxi">Insuficiência adrenal (deficiência de cortisol)</div>
+      <div class="ddxi">Potomania (ingestão excessiva de água/cerveja com baixa ingesta de solutos)</div>
+      <div class="ddxi">Polidipsia psicogênica</div>
+
+      <div class="ddxg" style="color:var(--red);margin-top:8px">Hiponatremia hipervolêmica (sódio e água retidos, mais água)</div>
+      <div class="ddxi">Insuficiência cardíaca descompensada</div>
+      <div class="ddxi">Cirrose hepática com ascite</div>
+      <div class="ddxi">Síndrome nefrótica, insuficiência renal avançada</div>
+
+      <div class="ddxg" style="color:var(--text2);margin-top:8px">Causas iatrogênicas / a excluir</div>
+      <div class="ddxi">Reposição excessiva de soluções hipotônicas (SG5%, SF 0,45%)</div>
+      <div class="ddxi">Hiponatremia pós-operatória (liberação não osmótica de ADH + fluidos hipotônicos)</div>
+      <div class="ddxi">Pseudo-hiponatremia: hiperglicemia (cada 100 mg/dL de glicose acima de 100 reduz Na ~1,6 mEq/L), hipertrigliceridemia grave, hiperproteinemia`;
+
+    orientacao = `<div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:9px 12px;margin-top:10px;font-size:11px;color:var(--text);line-height:1.65">
+      <b style="color:var(--cyan)">Fórmula de Adrogue-Madias — variação de Na por litro infundido:</b><br><br>
+      <div style="background:var(--panel2);border-radius:5px;padding:8px 12px;font-family:var(--mono);font-size:12px;margin-bottom:10px;text-align:center">
+        ΔNa = (Na<sub>solução</sub> − Na<sub>paciente</sub>) ÷ (ACT + 1)
+      </div>
+      <b>O resultado indica quanto o Na sérico vai variar para cada litro infundido.</b><br>
+      Se positivo → a solução sobe o Na. Se negativo → a solução desce o Na.<br><br>
+
+      <b style="color:var(--cyan)">Água Corporal Total (ACT):</b><br>
+      • Homem adulto: <b>0,60 × peso (kg)</b><br>
+      • Mulher adulta: <b>0,50 × peso (kg)</b><br>
+      • Idoso (> 65 anos): <b>0,45 × peso (kg)</b><br><br>
+
+      <b style="color:var(--cyan)">Concentração de Na das principais soluções (mEq/L):</b><br>
+      • NaCl 3% (hipertônico): <b>513 mEq/L</b> — para hiponatremia sintomática grave<br>
+      • Soro fisiológico (NaCl 0,9%): <b>154 mEq/L</b><br>
+      • Ringer lactato: <b>130 mEq/L</b><br>
+      • Soro ao meio (NaCl 0,45%): <b>77 mEq/L</b><br>
+      • Glicosado 5% (SG5%): <b>0 mEq/L</b> — água livre pura<br><br>
+
+      <b style="color:var(--cyan)">Como usar na prática:</b><br>
+      Exemplo: paciente de 60 kg (mulher), Na = 118 mEq/L. Quero usar NaCl 3% para subir o sódio.<br>
+      ACT = 0,50 × 60 = 30 L<br>
+      ΔNa = (513 − 118) ÷ (30 + 1) = 395 ÷ 31 = <b>+12,7 mEq/L por litro</b><br>
+      → Cada litro de NaCl 3% sobe o Na ~12,7 mEq/L. Para subir 5 mEq/L: 5 ÷ 12,7 ≈ 394 mL.<br><br>
+
+      <b>Orientação por gravidade:</b><br>
+      <b>Sintomática grave</b> (convulsão, rebaixamento): NaCl 3% em bolus de 100–150 mL — alvo 4–6 mEq/L na 1ª hora.<br>
+      <b>Assintomática ou leve/moderada:</b> tratar a causa. Restrição hídrica na SIADH. Reposição isotônica na hipovolêmica.<br><br>
+
+      <b style="color:var(--red)">⚠ Limite de correção:</b> máximo <b>8–10 mEq/L nas primeiras 24h</b> e <b>18 mEq/L em 48h</b> para evitar síndrome de desmielinização osmótica (mielinólise pontina). Risco maior em: alcoolismo crônico, desnutrição grave, hipocalemia, doença hepática.<br><br>
+
+      <div style="background:rgba(255,214,10,0.08);border:1px solid var(--yellow);border-radius:4px;padding:7px 10px;font-size:10px;color:var(--text2)">
+        ⚠ <b style="color:var(--text)">Disclaimer:</b> a fórmula de Adrogue-Madias é uma <b>aproximação</b>. Perdas concomitantes, diurese e variações volêmicas alteram o resultado real. Monitorar o sódio sérico com frequência e recalcular — nunca confiar apenas no cálculo inicial.
+      </div>
+    </div>`;
+
+  } else {
+    titulo = `Hipernatremia — Na⁺ ${na} mEq/L`;
+    subtitulo = na > 160 ? 'Grave (> 160 mEq/L)' : na > 150 ? 'Moderada (150–160 mEq/L)' : 'Leve (146–149 mEq/L)';
+
+    ddx = `
+      <div class="ddxg" style="color:var(--yellow)">Perda de água livre (mais comum)</div>
+      <div class="ddxi"><b>Diabetes insípido central</b> — deficiência de ADH: trauma craniano, neurocirurgia, tumores hipotalâmicos/hipofisários, meningite, anóxia cerebral</div>
+      <div class="ddxi"><b>Diabetes insípido nefrogênico</b> — rim não responde ao ADH: lítio (causa mais comum), hipercalcemia, hipocalemia grave, doença renal crônica avançada, amiloidose</div>
+      <div class="ddxi">Perdas insensíveis aumentadas: febre, hiperventilação, queimaduras extensas, sudorese intensa</div>
+      <div class="ddxi">Diarreia osmótica (lactulose, sorbitol, alimentação enteral hiperosmolar)</div>
+
+      <div class="ddxg" style="color:var(--red);margin-top:8px">Ganho de sódio (menos comum)</div>
+      <div class="ddxi">Hiperaldosteronismo primário</div>
+      <div class="ddxi">Síndrome de Cushing</div>
+      <div class="ddxi">Ingestão ou administração de solução salina hipertônica</div>
+
+      <div class="ddxg" style="color:var(--text2);margin-top:8px">Causas iatrogênicas / a excluir</div>
+      <div class="ddxi">Reposição excessiva de NaCl 0,9% ou NaHCO₃ (especialmente em acidose tratada)</div>
+      <div class="ddxi">Nutrição parenteral total hiperosmolar</div>
+      <div class="ddxi">Restrição hídrica sem reposição adequada em pacientes internados (idosos, intubados, rebaixados — incapazes de solicitar água)</div>
+      <div class="ddxi">Diuréticos de alça em dose excessiva sem reposição hídrica`;
+
+    orientacao = `<div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:9px 12px;margin-top:10px;font-size:11px;color:var(--text);line-height:1.65">
+      <b style="color:var(--cyan)">Fórmula de Adrogue-Madias — variação de Na por litro infundido:</b><br><br>
+      <div style="background:var(--panel2);border-radius:5px;padding:8px 12px;font-family:var(--mono);font-size:12px;margin-bottom:10px;text-align:center">
+        ΔNa = (Na<sub>solução</sub> − Na<sub>paciente</sub>) ÷ (ACT + 1)
+      </div>
+      <b>O resultado indica quanto o Na sérico vai variar (↑ ou ↓) para cada litro da solução infundida.</b><br>
+      Se positivo → a solução sobe o Na. Se negativo → a solução desce o Na.<br><br>
+
+      <b style="color:var(--cyan)">Água Corporal Total (ACT):</b><br>
+      • Homem adulto: <b>0,60 × peso (kg)</b><br>
+      • Mulher adulta: <b>0,50 × peso (kg)</b><br>
+      • Idoso (> 65 anos): <b>0,45 × peso (kg)</b><br><br>
+
+      <b style="color:var(--cyan)">Concentração de Na das principais soluções (mEq/L):</b><br>
+      • Soro fisiológico (NaCl 0,9%): <b>154 mEq/L</b><br>
+      • Ringer lactato: <b>130 mEq/L</b><br>
+      • Soro ao meio (NaCl 0,45%): <b>77 mEq/L</b><br>
+      • Glicosado 5% (SG5%): <b>0 mEq/L</b> — água livre pura<br>
+      • NaCl 3% (hipertônico): <b>513 mEq/L</b><br><br>
+
+      <b style="color:var(--cyan)">Como usar na prática:</b><br>
+      Exemplo: paciente de 70 kg (homem), Na = 165 mEq/L. Quero usar SG5% para baixar o sódio.<br>
+      ACT = 0,60 × 70 = 42 L<br>
+      ΔNa = (0 − 165) ÷ (42 + 1) = −165 ÷ 43 = <b>−3,8 mEq/L por litro</b><br>
+      → Cada litro de SG5% reduz o Na em ~3,8 mEq/L. Para baixar 10 mEq/L: 10 ÷ 3,8 ≈ 2,6 L.<br><br>
+
+      <b>Limite de correção na hipernatremia:</b> máximo <b>8–10 mEq/L por 24h</b> para evitar edema cerebral por reequilíbrio osmótico rápido. Monitorar Na a cada 4–6h e ajustar.<br><br>
+
+      <div style="background:rgba(255,214,10,0.08);border:1px solid var(--yellow);border-radius:4px;padding:7px 10px;font-size:10px;color:var(--text2)">
+        ⚠ <b style="color:var(--text)">Disclaimer:</b> a fórmula de Adrogue-Madias é uma <b>aproximação</b>. Na prática, perdas concomitantes, diurese, sudorese e variações no estado volêmico alteram o resultado. Monitorar o sódio sérico com frequência e recalcular conforme evolução — nunca confiar apenas no cálculo inicial.
+      </div>
+    </div>`;
+  }
+
+  return `<div class="rb ${cor} a">
+    <div class="rbl">Sódio Sérico</div>
+    <div class="rbt">${titulo}</div>
+    <div class="rbs" style="margin-bottom:8px">${subtitulo}</div>
+    ${ddx}
+    ${orientacao}
+  </div>`;
+}
+
+function validar(ph, pco2, po2, hco3, na, k, cl, arterial){
+  const erros = [];
+  const avisos = [];
+
+  // ── Limites biológicos absolutos ──
+  if(!isNaN(ph)){
+    if(ph < 6.7 || ph > 7.8) erros.push(`pH <b>${ph.toFixed(2)}</b> fora dos limites compatíveis com vida (6,70–7,80).`);
+  }
+  if(!isNaN(pco2)){
+    if(pco2 < 10 || pco2 > 140) erros.push(`PCO₂ <b>${pco2} mmHg</b> fora dos limites fisiológicos (10–140 mmHg).`);
+  }
+  if(!isNaN(hco3)){
+    if(hco3 < 2 || hco3 > 65) erros.push(`HCO₃⁻ <b>${hco3} mEq/L</b> fora dos limites biológicos possíveis (2–65 mEq/L).`);
+  }
+  if(!isNaN(po2)){
+    const po2max = arterial ? 600 : 120;
+    const po2label = arterial ? 'PaO₂' : 'PvO₂';
+    const po2lim = arterial ? '20–600' : '20–120';
+    if(po2 < 20 || po2 > po2max) erros.push(`${po2label} <b>${po2} mmHg</b> fora dos limites esperados (${po2lim} mmHg).`);
+  }
+  if(!isNaN(na)){
+    if(na < 100 || na > 195) erros.push(`Sódio <b>${na} mEq/L</b> fora dos limites biológicos (100–195 mEq/L).`);
+  }
+  if(!isNaN(k)){
+    if(k < 1.0 || k > 9.5) erros.push(`Potássio <b>${k} mEq/L</b> fora dos limites biológicos (1,0–9,5 mEq/L).`);
+  }
+  if(!isNaN(cl)){
+    if(cl < 70 || cl > 140) erros.push(`Cloro <b>${cl} mEq/L</b> fora dos limites biológicos (70–140 mEq/L).`);
+  }
+
+  // ── Henderson-Hasselbalch: consistência entre pH, PCO₂ e HCO₃⁻ ──
+  if(!isNaN(ph) && !isNaN(pco2) && !isNaN(hco3) && pco2 > 0 && hco3 > 0){
+    const phCalculado = 6.1 + Math.log10(hco3 / (0.0307 * pco2));
+    const diff = Math.abs(phCalculado - ph);
+    if(diff > 0.08){
+      const hco3Esperado = 0.0307 * pco2 * Math.pow(10, ph - 6.1);
+      const pco2Esperado = hco3 / (0.0307 * Math.pow(10, ph - 6.1));
+      erros.push(
+        `<b>Inconsistência química (Henderson-Hasselbalch):</b> com pH ${ph.toFixed(2)} e PCO₂ ${pco2} mmHg, ` +
+        `o HCO₃⁻ esperado é <b>${hco3Esperado.toFixed(1)} mEq/L</b> — não ${hco3} mEq/L. ` +
+        `Alternativamente, com pH ${ph.toFixed(2)} e HCO₃⁻ ${hco3} mEq/L, a PCO₂ esperada seria <b>${pco2Esperado.toFixed(0)} mmHg</b>. ` +
+        `Essa combinação é fisicamente impossível — pH, PCO₂ e HCO₃⁻ não podem coexistir. ` +
+        `<br><br><b style='color:var(--yellow)'>Causas mais prováveis:</b><br>• <b>Erro de digitação</b> — o mais comum. Verifique cada valor com atenção.<br>• <b>O HCO₃⁻ do gasômetro não é medido diretamente</b> — ele é calculado pelo próprio aparelho a partir do pH e PCO₂ medidos. Numa gasometria impressa pelo equipamento, os três valores sempre fecham a equação. Se não fecham ao digitar aqui, o erro está na transcrição.<br>• <b>Gasômetro descalibrado ou cartucho comprometido</b> — cartuchos vencidos, armazenados em temperatura incorreta ou aparelhos portáteis (ex: iSTAT) sem controle de qualidade recente podem gerar valores discrepantes. Nesse caso, pH e PCO₂ (eletrodos independentes) podem estar errados individualmente, e o HCO₃⁻ calculado a partir deles também será incorreto.<br>• <b>Amostra comprometida</b> — coagulação, bolha de ar, excesso de heparina líquida ou atraso no processamento podem distorcer os valores de forma não uniforme.`
+      );
+    }
+  }
+
+  // ── Avisos fisiológicos (possíveis mas improváveis / merecem atenção) ──
+  if(!isNaN(ph) && !isNaN(pco2) && !isNaN(hco3)){
+    // pH normal com PCO2 e HCO3 muito alterados = distúrbio misto compensado perfeitamente (raro, merece aviso)
+    if(ph >= 7.35 && ph <= 7.45 && pco2 > 55 && hco3 > 30){
+      // Verificar se HCO3 está dentro da compensação esperada para acidose respiratória crônica
+      const deltaCo2 = pco2 - 40;
+      const hco3EspCronico = 24 + (deltaCo2 / 10) * 4.5;
+      const hco3EspAgudo   = 24 + (deltaCo2 / 10) * 1.0;
+      const dentroCompCronica = hco3 >= hco3EspCronico - 2 && hco3 <= hco3EspCronico + 2;
+      const dentroCompAguda   = hco3 >= hco3EspAgudo - 2   && hco3 <= hco3EspAgudo + 2;
+
+      if(dentroCompCronica){
+        avisos.push(`pH normal-baixo com PCO₂ <b>${pco2} mmHg</b> e HCO₃⁻ <b>${hco3} mEq/L</b>: o HCO₃⁻ está dentro da <b>faixa esperada para compensação de acidose respiratória crônica</b> (esperado: ${(hco3EspCronico-2).toFixed(0)}–${(hco3EspCronico+2).toFixed(0)} mEq/L). <b>Hipótese principal: acidose respiratória crônica com compensação metabólica adequada</b> — típico de DPOC, obesidade hipoventilação, doenças neuromusculares crônicas. O pH levemente ácido ou normal baixo é o padrão esperado nesse cenário. Distúrbio misto (alcalose metabólica + acidose respiratória) é possível mas menos provável se o HCO₃⁻ não ultrapassar a faixa de compensação esperada.`);
+      } else if(hco3 > hco3EspCronico + 2){
+        avisos.push(`pH normal com PCO₂ <b>${pco2} mmHg</b> e HCO₃⁻ <b>${hco3} mEq/L</b>: o HCO₃⁻ está <b>acima</b> da faixa esperada para compensação crônica (esperado: ${(hco3EspCronico-2).toFixed(0)}–${(hco3EspCronico+2).toFixed(0)} mEq/L). Isso sugere <b>distúrbio misto: acidose respiratória crônica + alcalose metabólica associada</b> — o HCO₃⁻ subiu além do que a compensação justificaria. Causas comuns: vômitos, diuréticos, contração de volume em retentores crônicos de CO₂.`);
+      } else {
+        avisos.push(`pH normal com PCO₂ <b>${pco2} mmHg</b> e HCO₃⁻ <b>${hco3} mEq/L</b>: padrão compatível com <b>acidose respiratória aguda</b> ou início de compensação. HCO₃⁻ dentro da faixa aguda (esperado: ${(hco3EspAgudo-2).toFixed(0)}–${(hco3EspAgudo+2).toFixed(0)} mEq/L). Distúrbio misto também possível — correlacionar com evolução clínica.`);
+      }
+    }
+    if(ph >= 7.35 && ph <= 7.45 && pco2 < 30 && hco3 < 18){
+      avisos.push(`pH normal com PCO₂ <b>${pco2} mmHg</b> e HCO₃⁻ <b>${hco3} mEq/L</b> simultaneamente baixos: considere distúrbio misto (acidose metabólica + alcalose respiratória) com pH se equilibrando entre os dois distúrbios.`);
+    }
+    // PCO2 muito alto com pH normal sem HCO3 compatível já é pego pelo H-H
+    // Direção pH × PCO2 × HCO3 inconsistente
+    const phAcid = ph < 7.35, phAlc = ph > 7.45;
+    const co2Hi = pco2 > 45, co2Lo = pco2 < 35;
+    const hco3Hi = hco3 > 26, hco3Lo = hco3 < 22;
+    // pH ácido mas PCO2 baixo E HCO3 alto — direções incompatíveis com qualquer distúrbio real
+    if(phAcid && co2Lo && hco3Hi){
+      avisos.push(`pH ácido (${ph.toFixed(2)}) com PCO₂ baixa (${pco2} mmHg) e HCO₃⁻ elevado (${hco3} mEq/L): essa combinação de direções é fisiologicamente inconsistente. Verifique se os valores foram digitados corretamente.`);
+    }
+    // pH alcalótico mas PCO2 alto E HCO3 baixo
+    if(phAlc && co2Hi && hco3Lo){
+      avisos.push(`pH alcalótico (${ph.toFixed(2)}) com PCO₂ elevada (${pco2} mmHg) e HCO₃⁻ baixo (${hco3} mEq/L): essa combinação de direções é fisiologicamente inconsistente. Verifique se os valores foram digitados corretamente.`);
+    }
+  }
+
+  return { erros, avisos };
+}
+
+function analisar(){
+  const ph=g('ph'),pco2=g('pco2'),po2=g('po2'),hco3=g('hco3'),spo2=g('spo2'),fio2=g('fio2');
+  const na=g('sodio'),k=g('potassio'),cl=g('cloro'),alb=g('albumina'),glicSerica=g('glic_serica');
+  if(isNaN(ph)||isNaN(pco2)||isNaN(hco3)){alert('Preencha pelo menos pH, PCO₂ e HCO₃⁻.');return;}
+  if(!isNaN(g('spo2')) && g('spo2') > 100){
+    document.getElementById('result-area').innerHTML='<div class="placeholder"><div class="ic">⚠️</div><p><b>SpO₂ não pode ser maior que 100%.</b><br>Verifique o valor digitado.</p></div>';
+    return;
+  }
+  if(!isNaN(g('fio2')) && g('fio2') > 100){
+    document.getElementById('result-area').innerHTML='<div class="placeholder"><div class="ic">⚠️</div><p><b>FiO₂ não pode ser maior que 100%.</b><br>Verifique o valor digitado.</p></div>';
+    return;
+  }
+  let deltaRefinadoNota = ''; // inicialização segura — evita ReferenceError em alcaloses
+
+  // ── Validação fisiológica ──
+  const arterialV = tipoAmostra==='arterial';
+  // Novos campos
+  const lacRaw = g('lactato'), idadeV = g('idade');
+  const glicemia = g('glicemia'), ureia = g('ureia'), osmMedida = g('osm_medida');
+  const na_u = g('na_u'), k_u = g('k_u'), cl_u = g('cl_u'), ph_u = g('ph_u');
+  const osm_u_medida = g('osm_u_medida'), ureia_u = g('ureia_u'), glic_u = g('glic_u');
+  const lacMmol = calcLactato(lacRaw, lacUnit);
+  const {erros, avisos} = validar(ph, pco2, po2, hco3, na, k, cl, arterialV);
+  let alertaHtml = '';
+  if(erros.length > 0){
+    alertaHtml += `<div style="background:rgba(255,59,48,0.12);border:1px solid var(--red);border-radius:8px;padding:14px 16px;margin-bottom:14px" class="a">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);margin-bottom:8px">⚠ Inconsistência nos dados — verifique antes de interpretar</div>
+      ${erros.map(e=>`<div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:6px;padding-left:10px;border-left:2px solid var(--red)">• ${e}</div>`).join('')}
+    </div>`;
+  }
+  if(avisos.length > 0){
+    alertaHtml += `<div style="background:rgba(255,214,10,0.10);border:1px solid var(--yellow);border-radius:8px;padding:14px 16px;margin-bottom:14px" class="a">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--yellow);margin-bottom:8px">⚡ Atenção — combinação incomum</div>
+      ${avisos.map(a=>`<div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:6px;padding-left:10px;border-left:2px solid var(--yellow)">• ${a}</div>`).join('')}
+    </div>`;
+  }
+
+  const arterial=tipoAmostra==='arterial';
+  const co2Max=arterial?45:48, co2Min=arterial?35:41;
+  const phAcid=ph<7.35, phAlc=ph>7.45;
+  const co2Hi=pco2>co2Max, co2Lo=pco2<co2Min;
+  const hco3Hi=hco3>26, hco3Lo=hco3<22;
+
+  // Distúrbio primário
+  let dTit='',dCol='cyan',misto=false;
+  if(phAcid){
+    if(co2Hi&&hco3Lo){dTit='Distúrbio misto: Acidose respiratória + Acidose metabólica';dCol='red';misto=true;}
+    else if(co2Hi){dTit='Acidose Respiratória';dCol='yellow';}
+    else if(hco3Lo){dTit='Acidose Metabólica';dCol='red';}
+    else{dTit='Acidose (etiologia indeterminada)';dCol='red';}
+  } else if(phAlc){
+    if(co2Lo&&hco3Hi){dTit='Distúrbio misto: Alcalose respiratória + Alcalose metabólica';dCol='yellow';misto=true;}
+    else if(co2Lo&&!hco3Hi){
+      // Verificar se HCO3 está acima da compensação esperada para alcalose resp
+      const dCo2alc = 40 - pco2;
+      const hco3EspAgAlc = 24 - (dCo2alc/10)*2;
+      const hco3EspCrAlc = 24 - (dCo2alc/10)*4;
+      if(hco3 > hco3EspAgAlc + 2){
+        // HCO3 acima do esperado mesmo para compensação aguda → alcalose metabólica associada
+        const hco3EspAgAlcFmt = hco3EspAgAlc.toFixed(1);
+        const hco3EspCrAlcFmt = hco3EspCrAlc.toFixed(1);
+        dTit=`Distúrbio misto: Alcalose respiratória + Alcalose metabólica — HCO₃⁻ medido (${hco3}) acima do esperado para compensação (agudo: ${hco3EspAgAlcFmt} | crônico: ${hco3EspCrAlcFmt} mEq/L). Fórmula: 24 − (ΔPCo₂÷10) × 2 (agudo) ou × 4 (crônico)`;dCol='yellow';misto=true;
+      } else {
+        dTit='Alcalose Respiratória';dCol='cyan';
+      }
+    }
+    else if(hco3Hi){dTit='Alcalose Metabólica';dCol='cyan';}
+    else{dTit='Alcalose (etiologia indeterminada)';dCol='yellow';}
+  } else {
+    if(hco3Lo&&co2Lo){dTit='Acidose metabólica compensada (ou misto com pH normalizado)';dCol='yellow';}
+    else if(hco3Hi&&co2Hi){
+      // Distinguir acidose resp crônica compensada de distúrbio misto
+      const dCo2norm = pco2 - 40;
+      const hco3CronEsp = 24 + (dCo2norm/10)*4.5;
+      const hco3AgEsp   = 24 + (dCo2norm/10)*1.0;
+      if(hco3 >= hco3CronEsp-2 && hco3 <= hco3CronEsp+2){
+        dTit='Acidose respiratória crônica com compensação metabólica adequada (pH normalizado)';dCol='yellow';
+      } else if(hco3 >= hco3AgEsp-2 && hco3 <= hco3AgEsp+2){
+        dTit='Acidose respiratória aguda com compensação metabólica inicial (pH normalizado)';dCol='yellow';
+      } else if(hco3 > hco3CronEsp+2){
+        dTit='Distúrbio misto: acidose respiratória crônica + alcalose metabólica (pH normalizado entre os dois)';dCol='yellow';
+      } else {
+        dTit='Alcalose metabólica compensada (ou distúrbio misto com pH normalizado)';dCol='yellow';
+      }
+    }
+    else{dTit='Gasometria dentro dos valores de referência';dCol='green';}
+  }
+
+  // Compensação
+  let cTxt='',cDev='',cNota='';
+  if(!misto){
+    if(phAcid&&hco3Lo&&!co2Hi){
+      const lo=(1.5*hco3+6).toFixed(0),hi=(1.5*hco3+10).toFixed(0);
+      cTxt=`PCO₂ esperada — <b>Fórmula de Winter:</b> 1,5 × HCO₃⁻ + 8 ± 2 = 1,5 × ${hco3} + 8 ± 2 = <b>${lo}–${hi} mmHg</b>`;
+      if(pco2>+hi) cDev='⚠️ PCO₂ acima do esperado → acidose respiratória associada';
+      else if(pco2<+lo) cDev='⚠️ PCO₂ abaixo do esperado → alcalose respiratória associada';
+      else {
+        cDev='✓ Compensação respiratória adequada';
+        // Nota explicativa: compensação adequada NÃO normaliza o pH
+        const phSemComp = 6.1 + Math.log10(hco3/(0.0307*40));
+        const phComComp = 6.1 + Math.log10(hco3/(0.0307*pco2));
+        cNota = `<div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:9px 12px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
+          <b style="color:var(--cyan)">Por que o pH ainda está ácido se a compensação é adequada?</b><br><br>
+          Compensação "adequada" significa que o pulmão fez tudo que conseguia — não que o pH normalizou. Sem hiperventilação, o pH seria ~<b>${phSemComp.toFixed(2)}</b>. Com a PCO₂ de ${pco2} mmHg, o pH é ~<b>${phComComp.toFixed(2)}</b>. A hiperventilação atenuou a queda, mas não a reverteu.<br><br>
+          <b>Regra prática:</b> a compensação respiratória eleva o pH ~0,1–0,15 unidades acima do que seria sem hiperventilação. Com HCO₃⁻ muito baixo${hco3<10?' (< 10 mEq/L como neste caso)':''}, o pH permanece sempre abaixo de 7,35 mesmo com compensação máxima. Isso é fisiologicamente normal — não indica falha respiratória.
+        </div>`;
+      }
+    } else if(phAlc&&hco3Hi&&!co2Lo){
+      const esp=0.7*(hco3-24)+40;
+      const lo=(esp-2).toFixed(0),hi=(esp+2).toFixed(0);
+      cTxt=`PCO₂ esperada: <b>${lo}–${hi} mmHg</b>`;
+      if(pco2>+hi) cDev='⚠️ PCO₂ acima do esperado → acidose respiratória associada';
+      else if(pco2<+lo) cDev='⚠️ PCO₂ abaixo do esperado → alcalose respiratória associada';
+      else {
+        cDev='✓ Compensação respiratória adequada';
+        cNota=`<div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:9px 12px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
+          <b style="color:var(--cyan)">Por que o pH ainda está alcalótico se a compensação é adequada?</b><br><br>
+          Na alcalose metabólica, o pulmão compensa retendo CO₂ (hipoventilação). Mas essa compensação é limitada — a hipóxia resultante aciona quimiorreceptores periféricos que travam a hipoventilação antes que o pH normalize. A PCO₂ raramente sobe acima de 55–60 mmHg como compensação pura. O pH permanece alcalótico mesmo com compensação máxima.
+        </div>`;
+      }
+    } else if(phAcid&&co2Hi&&!hco3Lo){
+      const d=pco2-40;
+      const ag=(24+(d/10)*1).toFixed(1),cr=(24+(d/10)*4.5).toFixed(1);
+      cTxt=`HCO₃⁻ esperado: <b>${ag} mEq/L (agudo)</b> a <b>${cr} mEq/L (crônico)</b> — Fórmula: 24 + (ΔPCo₂÷10) × 1 (agudo) ou × 4,5 (crônico)`;
+      if(hco3>+cr+2) cDev='⚠️ HCO₃⁻ acima do esperado → alcalose metabólica associada';
+      else if(hco3<+ag-2) cDev='⚠️ HCO₃⁻ abaixo do esperado → acidose metabólica associada';
+      else {
+        cDev='✓ Compensação metabólica adequada';
+        const hco3MedidoAcidResp = hco3;
+        cNota=`<div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:9px 12px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
+          <b style="color:var(--cyan)">Compensação metabólica adequada — mas o pH permanece ácido.</b><br><br>
+          O rim reteve HCO₃⁻ proporcionalmente ao aumento da PCO₂, mas isso atenua — não reverte — a acidemia respiratória. A compensação renal é lenta (2–5 dias para ser completa) e nunca normaliza o pH na acidose respiratória crônica. pH ainda ácido com compensação adequada é o padrão esperado.<br><br>
+          <b style="color:var(--yellow)">Sobre a margem de tolerância:</b> a fórmula de compensação gera uma faixa (± 2 mEq/L), não um valor exato. Um HCO₃⁻ de ${hco3MedidoAcidResp} mEq/L que cai poucos décimos fora da faixa calculada <i>não significa</i> que há distúrbio adicional — pode ser variação analítica do aparelho ou arredondamento. O julgamento clínico sempre prevalece sobre o cálculo milimétrico.
+        </div>`;
+      }
+    } else if(phAlc&&co2Lo&&!hco3Hi){
+      const d=40-pco2;
+      const ag=(24-(d/10)*2).toFixed(1),cr=(24-(d/10)*4).toFixed(1);
+      cTxt=`HCO₃⁻ esperado: <b>${cr} (crônico)</b> a <b>${ag} (agudo)</b> mEq/L`;
+      if(hco3<+cr-2) cDev='⚠️ HCO₃⁻ abaixo do esperado → acidose metabólica associada';
+      else if(hco3>+ag+2) cDev='⚠️ HCO₃⁻ acima do esperado → alcalose metabólica associada';
+      else {
+        cDev='✓ Compensação metabólica adequada';
+        cNota=`<div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:9px 12px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
+          <b style="color:var(--cyan)">Atenção: alcalose respiratória com compensação adequada.</b><br><br>
+          Se o paciente estiver acordado e sem suporte ventilatório, a PCO₂ baixa quase certamente reflete hiperventilação pelo centro respiratório tentando compensar uma acidose metabólica subjacente — mesmo que não seja evidente nos parâmetros atuais. Considere: acidose metabólica crônica compensada (pH pode estar normalizado), sepse precoce, hepatopatia grave ou gravidez como estímulos ao centro respiratório.<br><br>
+          Na alcalose respiratória, a compensação renal é a única que pode — em casos crônicos — normalizar completamente o pH.
+        </div>`;
+      }
+    }
+  }
+
+  // Ânion Gap
+  let agHtml='';
+  const temAcidoseMetab = hco3Lo || (phAcid && !co2Hi);
+  if(!isNaN(na)&&!isNaN(cl)&&temAcidoseMetab){
+    const ag=na-(cl+hco3);
+    const albV=!isNaN(alb)?alb:4.0;
+    const agC=ag+2.5*(4.0-albV);
+    const agAlto=agC>12;
+    agHtml=`<div class="rb ${agAlto?'red':'green'} a d3">
+      <div class="rbl">Ânion Gap</div>
+      <div class="rbt">AG = ${ag.toFixed(1)}${!isNaN(alb)?` → Corrigido: ${agC.toFixed(1)} mEq/L`:' mEq/L'}</div>
+      <div class="rbs" style="margin-bottom:8px">${agAlto?'⬆ Ânion gap <b>elevado</b> (> 12 corrigido pela albumina)':'✓ Ânion gap normal (≤ 12)'}</div>
+      <div style="background:var(--panel);border-radius:5px;padding:9px 12px;font-size:11px;color:var(--text);line-height:1.65">
+        <div style="margin-bottom:6px"><b style="color:var(--cyan)">Fórmula:</b> AG = Na⁺ − (Cl⁻ + HCO₃⁻) = ${na} − (${cl} + ${hco3}) = <b>${ag.toFixed(1)} mEq/L</b></div>
+        ${!isNaN(alb)?`<div style="margin-bottom:6px"><b style="color:var(--cyan)">Correção pela albumina:</b> AG corrigido = AG + 2,5 × (4,0 − albumina) = ${ag.toFixed(1)} + 2,5 × (4,0 − ${alb}) = <b>${agC.toFixed(1)} mEq/L</b></div>`:''}
+        <div style="color:var(--text2)"><b style="color:var(--text)">Por que corrigir pela albumina?</b> A albumina é um ânion não medido — contribui naturalmente para o AG. Em hipoalbuminemia, o AG fica artificialmente baixo e pode mascarar uma acidose real: para cada 1 g/dL de queda na albumina abaixo de 4,0, o AG cai ~2,5 mEq/L. Sem correção, mais de 50% dos casos de AG elevado em pacientes com albumina baixa passam despercebidos.</div>
+      </div>
+      ${!isNaN(alb)&&alb<3.5?`<div class="rbs" style="color:var(--yellow);margin-top:6px">⚠ Albumina baixa (${alb} g/dL) — sem correção o AG seria subestimado em ${(2.5*(4.0-alb)).toFixed(1)} mEq/L</div>`:''}`;
+    if(agAlto&&hco3Lo){
+      const dAG=agC-12,dHCO3=24-hco3,dr=dAG/dHCO3;
+      let drI=dr<0.4?'< 0,4 → Acidose metabólica com AG normal associada (HCO₃⁻ caiu mais do que o AG explica)':dr<1?'0,4–1,0 → Distúrbio misto: acidose com AG + acidose metabólica com AG normal associada':dr<=2?'1,0–2,0 → Acidose metabólica com AG elevado pura':'> 2,0 → Alcalose metabólica associada à acidose com AG';
+      agHtml+=`<div class="rbs" style="margin-top:8px"><b>Delta ratio:</b> ${dr.toFixed(2)} — ${drI}</div>
+      <div style="background:var(--panel2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;margin-top:10px;font-size:11px;color:var(--text);line-height:1.65">
+
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">📐 O que é o Delta Ratio e quando calcular?</div>
+
+        <div style="margin-bottom:10px"><b>Quando calcular:</b> somente quando há acidose metabólica com <b style="color:var(--cyan)">ânion gap elevado</b>. O delta ratio responde à pergunta: <i style="color:var(--yellow)">"Existe algum outro distúrbio metabólico escondido por trás desta acidose?"</i></div>
+
+        <div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:10px 12px;margin-bottom:10px">
+          <b style="color:var(--cyan)">Analogia:</b> imagine que você tem um cano entupindo (AG sobe) e outro cano vazando (HCO₃⁻ cai). Em condições normais, cada unidade de entupimento causa exatamente uma unidade de vazamento — proporção 1:1. Se o vazamento for menor que o esperado, alguém está tampando o outro cano por fora (alcalose oculta). Se for maior, há dois canos vazando ao mesmo tempo (acidose hiperclorêmica associada).
+        </div>
+
+        <div style="margin-bottom:8px"><b>A conta:</b> comparamos o quanto o AG subiu acima de 12 com o quanto o HCO₃⁻ caiu abaixo de 24. Se fosse só uma acidose com AG, essas variações deveriam ser proporcionais.</div>
+
+        <div style="background:var(--panel);border-radius:4px;padding:8px 12px;font-family:var(--mono);font-size:13px;color:var(--text);margin-bottom:10px;text-align:center">
+          Δ ratio = <span style="color:var(--cyan)">(AG corrigido − 12)</span> ÷ <span style="color:var(--yellow)">(24 − HCO₃⁻)</span> = <b style="color:var(--green);font-size:15px">${dr.toFixed(2)}</b>
+        </div>
+
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--text2);margin-bottom:7px;text-transform:uppercase">Interpretação:</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+
+          <div style="background:${dr<0.4?'rgba(255,214,10,0.12)':'var(--panel)'};border:1px solid ${dr<0.4?'var(--yellow)':'var(--border)'};border-radius:6px;padding:9px 12px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+              <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${dr<0.4?'var(--yellow)':'var(--text2)'}">&lt; 0,4</span>
+              ${dr<0.4?'<span style="font-size:10px;background:var(--yellow);color:#000;border-radius:3px;padding:1px 7px;font-weight:700">← ESTE CASO</span>':''}
+            </div>
+            <div style="font-size:11px;color:${dr<0.4?'var(--text)':'var(--text2)'};line-height:1.55">O HCO₃⁻ caiu mais do que o AG elevado justificaria sozinho — há uma <b>segunda causa com AG normal</b> deprimindo o bicarbonato ao mesmo tempo.</div>
+            ${dr<0.4?`<div style="margin-top:6px;font-size:11px;color:var(--text);border-top:1px solid var(--border);padding-top:6px"><b style="color:var(--yellow)">Exemplo ilustrativo (apenas do padrão matemático):</b> paciente séptico com acidose lática (AG alto) + salina em volume (acidose hiperclorêmica associada). Dois mecanismos deprimindo o HCO₃⁻ ao mesmo tempo. <i style="color:var(--text2)">Este exemplo não é o diagnóstico deste caso — consulte os diagnósticos diferenciais abaixo e correlacione com a clínica.</i></div>`:''}
+          </div>
+
+          <div style="background:${dr>=0.4&&dr<1?'rgba(255,214,10,0.12)':'var(--panel)'};border:1px solid ${dr>=0.4&&dr<1?'var(--yellow)':'var(--border)'};border-radius:6px;padding:9px 12px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+              <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${dr>=0.4&&dr<1?'var(--yellow)':'var(--text2)'}">0,4 – 1,0</span>
+              ${dr>=0.4&&dr<1?'<span style="font-size:10px;background:var(--yellow);color:#000;border-radius:3px;padding:1px 7px;font-weight:700">← ESTE CASO</span>':''}
+            </div>
+            <div style="font-size:11px;color:${dr>=0.4&&dr<1?'var(--text)':'var(--text2)'};line-height:1.55">Distúrbio misto: acidose com AG predominante + componente de acidose com AG normal associado. A causa do segundo componente depende do contexto clínico.</div>
+            ${dr>=0.4&&dr<1?`<div style="margin-top:6px;font-size:11px;color:var(--text);border-top:1px solid var(--border);padding-top:6px"><b style="color:var(--yellow)">Exemplo ilustrativo (apenas do padrão matemático):</b> cetoacidose com insuficiência renal associada, ou séptico com salina moderada — ambos com um segundo mecanismo de AG normal contribuindo. <i style="color:var(--text2)">Este exemplo não é o diagnóstico deste caso — consulte os diagnósticos diferenciais abaixo e correlacione com a clínica.</i></div>`:''}
+          </div>
+
+          <div style="background:${dr>=1&&dr<=2?'rgba(0,232,150,0.10)':'var(--panel)'};border:1px solid ${dr>=1&&dr<=2?'var(--green)':'var(--border)'};border-radius:6px;padding:9px 12px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+              <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${dr>=1&&dr<=2?'var(--green)':'var(--text2)'}">1,0 – 2,0</span>
+              ${dr>=1&&dr<=2?'<span style="font-size:10px;background:var(--green);color:#000;border-radius:3px;padding:1px 7px;font-weight:700">← ESTE CASO</span>':''}
+            </div>
+            <div style="font-size:11px;color:${dr>=1&&dr<=2?'var(--text)':'var(--text2)'};line-height:1.55">✓ Esperado — acidose metabólica com AG elevado pura. AG e HCO₃⁻ variaram proporcionalmente, sem distúrbio metabólico adicional.</div>
+            ${dr>=1&&dr<=2?`<div style="margin-top:6px;font-size:11px;color:var(--text);border-top:1px solid var(--border);padding-top:6px"><b style="color:var(--green)">Exemplo ilustrativo (apenas do padrão matemático):</b> cetoacidose diabética sem distúrbios associados, onde AG e HCO₃⁻ variam proporcionalmente. <i style="color:var(--text2)">Este exemplo não é o diagnóstico deste caso — qualquer causa de AG elevado pode apresentar este padrão. Consulte os diagnósticos diferenciais abaixo e correlacione com a clínica.</i></div>`:''}
+          </div>
+
+          <div style="background:${dr>2?'rgba(0,212,255,0.10)':'var(--panel)'};border:1px solid ${dr>2?'var(--cyan)':'var(--border)'};border-radius:6px;padding:9px 12px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+              <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${dr>2?'var(--cyan)':'var(--text2)'}">&gt; 2,0</span>
+              ${dr>2?'<span style="font-size:10px;background:var(--cyan);color:#000;border-radius:3px;padding:1px 7px;font-weight:700">← ESTE CASO</span>':''}
+            </div>
+            <div style="font-size:11px;color:${dr>2?'var(--text)':'var(--text2)'};line-height:1.55">Alcalose metabólica oculta: o HCO₃⁻ caiu menos do que o esperado — algo estava elevando o bicarbonato antes da acidose e mascara sua queda.</div>
+            ${dr>2?`<div style="margin-top:6px;font-size:11px;color:var(--text);border-top:1px solid var(--border);padding-top:6px"><b style="color:var(--cyan)">Exemplo ilustrativo (apenas do padrão matemático):</b> cetoacidose + vômitos prévios, onde a alcalose estava elevando o HCO₃⁻ antes da crise e mascara a queda. <i style="color:var(--text2)">Este exemplo não é o diagnóstico deste caso — consulte os diagnósticos diferenciais abaixo e correlacione com a clínica.</i></div>`:''}
+          </div>
+
+        </div>
+
+        <div style="background:var(--panel);border-left:3px solid var(--yellow);border-radius:4px;padding:9px 12px;font-size:11px">
+          <b style="color:var(--yellow)">⚠ Limitação:</b> o delta ratio assume HCO₃⁻ basal de 24 e AG normal de 12. Em pacientes com distúrbios crônicos (insuficiência renal, DPOC, alcalose metabólica crônica), esses valores basais são diferentes — o resultado pode enganar se não for contextualizado clinicamente.
+        </div>
+      </div>`;
+    }
+    agHtml += deltaRefinadoNota || '';
+    agHtml+='</div>';
+  }
+
+  // P/F
+  let pfHtml='';
+  if(arterial&&!isNaN(po2)&&!isNaN(fio2)){
+    const frac=fio2>1?fio2/100:fio2,pf=po2/frac;
+    let pfC, pfT, pfNota;
+    if(pf>300){
+      pfC='green';
+      pfT='Normal (P/F > 300) — oxigenação preservada.';
+      pfNota='';
+    } else if(pf>200){
+      pfC='yellow';
+      pfT='Hipoxemia moderada (P/F 200–300).';
+      pfNota=`<div style="background:var(--panel);border-left:3px solid var(--yellow);border-radius:4px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
+        Pela <b>Definição de Berlim</b>, P/F nesta faixa corresponderia ao critério de <i>hipoxemia leve</i> — mas SDRA é um diagnóstico clínico-radiológico que exige: início agudo (≤ 7 dias), infiltrado bilateral ao RX/TC não explicado por derrame ou colapso, e exclusão de edema cardiogênico como causa principal. <b>P/F baixo isoladamente não define SDRA.</b>
+      </div>`;
+    } else if(pf>100){
+      pfC='red';
+      pfT='Hipoxemia grave (P/F 100–200).';
+      pfNota=`<div style="background:var(--panel);border-left:3px solid var(--red);border-radius:4px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
+        Pela <b>Definição de Berlim</b>, P/F nesta faixa corresponderia ao critério de <i>hipoxemia moderada</i> — mas SDRA é um diagnóstico clínico-radiológico que exige: início agudo (≤ 7 dias), infiltrado bilateral ao RX/TC não explicado por derrame ou colapso, e exclusão de edema cardiogênico como causa principal. <b>P/F baixo isoladamente não define SDRA — o diagnóstico depende do conjunto de critérios.</b>
+      </div>`;
+    } else {
+      pfC='red';
+      pfT='Hipoxemia muito grave (P/F ≤ 100).';
+      pfNota=`<div style="background:var(--panel);border-left:3px solid var(--red);border-radius:4px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
+        Pela <b>Definição de Berlim</b>, P/F ≤ 100 corresponderia ao critério de <i>hipoxemia grave</i> — mas SDRA é um diagnóstico clínico-radiológico que exige: início agudo (≤ 7 dias), infiltrado bilateral ao RX/TC não explicado por derrame ou colapso, e exclusão de edema cardiogênico como causa principal. <b>P/F baixo isoladamente não define SDRA.</b> Outras causas de hipoxemia grave devem ser consideradas: pneumonia extensa, atelectasia maciça, tromboembolismo pulmonar, edema cardiogênico.
+      </div>`;
+    }
+    pfHtml=`<div class="rb ${pfC} a d4">
+      <div class="rbl">Relação P/F (oxigenação)</div>
+      <div class="rbt">P/F = ${pf.toFixed(0)}</div>
+      <div class="rbs" style="margin-bottom:6px">${pfT}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;font-size:11px;text-align:center">
+        <div style="background:var(--panel2);border:1px solid ${pf>200&&pf<=300?'var(--yellow)':'var(--border)'};border-radius:5px;padding:6px 4px">
+          <div style="color:var(--yellow);font-weight:700;font-family:var(--mono)">200–300</div>
+          <div style="color:var(--text2)">Hipoxemia leve</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid ${pf>100&&pf<=200?'var(--red)':'var(--border)'};border-radius:5px;padding:6px 4px">
+          <div style="color:var(--red);font-weight:700;font-family:var(--mono)">100–200</div>
+          <div style="color:var(--text2)">Hipoxemia grave</div>
+        </div>
+        <div style="background:var(--panel2);border:1px solid ${pf<=100?'var(--red)':'var(--border)'};border-radius:5px;padding:6px 4px">
+          <div style="color:var(--red);font-weight:700;font-family:var(--mono)">≤ 100</div>
+          <div style="color:var(--text2)">Hipoxemia muito grave</div>
+        </div>
+      </div>
+      ${pfNota}
+      ${ph > 7.45 ? `<div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
+        <b style="color:var(--cyan)">Efeito Bohr — alcalose desloca a curva de dissociação da Hb:</b> em pH alcalótico, a hemoglobina tem maior afinidade pelo O₂ e o libera menos aos tecidos. Isso significa que uma SpO₂ aparentemente boa pode coexistir com PaO₂ relativamente baixa — a SpO₂ está "artificialmente" elevada pelo desvio da curva. A oxigenação tecidual real pode ser pior do que a SpO₂ sugere.
+      </div>` : ''}
+      <div style="margin-top:8px;font-size:10px;color:var(--text2);font-style:italic">
+        Referência P/F: Definição de Berlim (JAMA 2012). P/F calculado com FiO₂ exata — válido para VM com PEEP ≥ 5 cmH₂O nos critérios originais.
+      </div>
+    </div>`;
+  }
+
+  // DDx
+  const agCorr=(!isNaN(na)&&!isNaN(cl)&&temAcidoseMetab)?(na-(cl+hco3)+2.5*(4.0-(!isNaN(alb)?alb:4.0))):null;
+  const agAlto2=agCorr!==null?agCorr>12:null;
+  // Flag de duplo distúrbio metabólico (delta ratio < 1 com AG elevado)
+  const drParaDDx = (agAlto2 && hco3Lo && agCorr!==null) ? (agCorr-12)/(24-hco3) : null;
+  const duploDist = drParaDDx !== null && drParaDDx < 1.0;
+  let ddx='';
+
+  if(hco3Lo||(phAcid&&!co2Hi)||duploDist){
+    const notaDuplo = duploDist ? `<div style="background:rgba(255,214,10,0.08);border:1px solid var(--yellow);border-radius:5px;padding:7px 10px;margin-bottom:6px;font-size:11px;color:var(--text)">⚡ <b>Delta ratio indica duplo distúrbio metabólico (AG elevado + AG normal).</b> Os diagnósticos diferenciais abaixo cobrem ambos os mecanismos — procurar causa para cada um.</div>` : '';
+    ddx+=`<div class="ddxt">DDx — Acidose Metabólica</div>${notaDuplo}`;
+    if(agAlto2!==false){
+      ddx+=`<div class="ddxg" style="color:var(--red)">AG Elevado (> 12)</div>
+      <div class="ddxi">Cetoacidose diabética, alcoólica, por jejum prolongado</div>
+      <div class="ddxi">Acidose lática por hipóxia tecidual (tipo A): choque séptico, choque cardiogênico, isquemia mesentérica, intoxicação por monóxido de carbono ou cianeto</div>
+      <div class="ddxi">Acidose lática sem hipóxia (tipo B): metformina, propofol em dose alta, isoniazida; intoxicação por salicilato, metanol ou etilenoglicol</div>
+      <div class="ddxi">Insuficiência renal avançada (FG < 20 mL/min), insuficiência hepática</div>
+      <div class="ddxi">Rabdomiólise grave, penicilinas em dose alta, ácido piroglutâmico</div>`;
+    }
+    if(agAlto2!==true || duploDist){
+      ddx+=`<div class="ddxg" style="color:var(--yellow);margin-top:8px">AG Normal — Hiperclorêmica</div>
+      <div class="ddxi">Diarreia, fístulas biliares/pancreáticas, derivações ureterais</div>
+      <div class="ddxi">Acidose tubular renal tipo 1 — medicamentos como anfotericina B, lítio; doenças autoimunes (síndrome de Sjögren, lúpus)</div>
+      <div class="ddxi">Acidose tubular renal tipo 2 — medicamentos como ifosfamida, tenofovir, topiramato; inibidores da anidrase carbônica (acetazolamida)</div>
+      <div class="ddxi">Acidose tubular renal tipo 4 — hipoaldosteronismo (insuficiência adrenal, uso de heparina, IECA/BRA em nefropatas)</div>
+      <div class="ddxi">Uremia precoce, ressuscitação com salina isotônica, hiperalimentação parenteral</div>
+      ${(isNaN(na_u)||isNaN(k_u)||isNaN(cl_u))?`<div style="background:rgba(0,212,255,0.08);border:1px solid var(--cyan);border-radius:5px;padding:9px 12px;margin-top:10px;font-size:11px;color:var(--text);line-height:1.6">
+        <b style="color:var(--cyan)">💡 Próximo passo diagnóstico recomendado: eletrólitos urinários</b><br><br>
+        Para diferenciar causa <b>renal</b> (acidose tubular renal, insuficiência renal) de <b>extra-renal</b> (diarreia, fístula, salina), solicite urina spot com:<br>
+        • Na⁺, K⁺ e Cl⁻ urinários → calcular <b>ânion gap urinário</b> (Na + K − Cl)<br>
+        • pH urinário → orienta tipo de ATR se AGU positivo<br>
+        • Se pH_u > 6,5 ou Na_u < 20: acrescentar <b>osmolalidade urinária</b> para gap osmolar urinário<br><br>
+        Insira esses valores na seção <i>"Exames complementares opcionais"</i> acima para interpretação automática.
+      </div>`:''}
+      <div style="background:var(--panel);border-left:3px solid var(--yellow);border-radius:4px;padding:9px 12px;margin:8px 0 4px;font-size:11px;color:var(--text);line-height:1.6">
+        <b style="color:var(--yellow)">⚠ O cloro pode estar normal na acidose hiperclorêmica?</b><br>
+        Sim — e isso é uma armadilha clínica frequente. O termo "hiperclorêmica" descreve o <i>mecanismo</i> (perda de HCO₃⁻ substituída por Cl⁻), não necessariamente um cloro sérico elevado na medição.<br><br>
+        <b>Por quê?</b> Em pacientes desidratados ou com hiponatremia, o cloro sérico pode estar falsamente normal ou até baixo, mesmo que proporcionalmente elevado em relação ao sódio. O <b style="color:var(--cyan)">cloro corrigido</b> (Cl medido × 140 ÷ Na medido) é mais confiável nesses casos.<br><br>
+        Além disso, causas como <b>acidose tubular renal e diarreia crônica</b> podem cursar com AG normal e cloro dentro da faixa de referência laboratorial — o diagnóstico fica pelo contexto clínico e pela exclusão de AG elevado.
+      </div>`;
+    }
+  }
+  if(hco3Hi||(phAlc&&!co2Lo)||(misto&&phAlc&&co2Lo)){
+    ddx+=`<div class="ddxt">DDx — Alcalose Metabólica</div>
+    <div class="ddxg">Responsiva a cloro (urina Cl⁻ < 25 mEq/L)</div>
+    <div class="ddxi">Vômitos, aspiração nasogástrica, diuréticos (fase pós), contração de volume</div>
+    <div class="ddxi">Alcalose pós-hipercápnica — paciente com retenção crônica de CO₂ (DPOC, obesidade hipoventilação) que é ventilado agressivamente e tem a PCO₂ normalizada rapidamente</div>
+    <div class="ddxg" style="margin-top:8px">Resistente a cloro (urina Cl⁻ > 40 mEq/L)</div>
+    <div class="ddxi">Hiperaldosteronismo primário, síndrome de Cushing, corticoides crônicos</div>
+    <div class="ddxi">Síndrome de Bartter/Gitelman, hipocalemia grave, bicarbonato excessivo</div>`;
+  }
+  // Verificar se PCO2 alta é compensação de alcalose metabólica ou distúrbio primário
+  const pco2EspAlcMet = hco3Hi ? (0.7*(hco3-24)+40) : null;
+  const pco2DentroCompAlcMet = pco2EspAlcMet !== null && pco2 >= pco2EspAlcMet-2 && pco2 <= pco2EspAlcMet+2;
+  const co2HiPrimario = co2Hi && !pco2DentroCompAlcMet;
+
+  if(co2Hi||(phAcid&&!hco3Lo)){
+    const notaCo2Comp = pco2DentroCompAlcMet ? `<div style="background:rgba(0,212,255,0.08);border-left:3px solid var(--cyan);border-radius:4px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--text);line-height:1.55"><b style="color:var(--cyan)">⚠ PCO₂ elevada como compensação, não como distúrbio primário.</b> A PCO₂ de ${pco2} mmHg está dentro da faixa esperada de compensação para a alcalose metabólica (${(pco2EspAlcMet-2).toFixed(0)}–${(pco2EspAlcMet+2).toFixed(0)} mmHg). Isso é hipoventilação compensatória — o pulmão retendo CO₂ para atenuar a alcalose. As causas abaixo seriam relevantes apenas se a PCO₂ estivesse acima da faixa de compensação esperada, indicando acidose respiratória adicional.</div>` : '';
+    ddx+=`<div class="ddxt">DDx — Acidose Respiratória</div>${notaCo2Comp}`;
+    ddx+=`<div class="ddxg">Depressão do drive</div>
+    <div class="ddxi">Sedação excessiva (opioides, benzodiazepínicos), AVC/lesão de tronco, hipotireoidismo grave</div>
+    <div class="ddxg" style="margin-top:8px">Doenças neuromusculares</div>
+    <div class="ddxi">Doenças neuromusculares: síndrome de Guillain-Barré, miastenia grave, esclerose lateral amiotrófica (ELA), bloqueio neuromuscular residual pós-cirúrgico</div>
+    <div class="ddxg" style="margin-top:8px">Obstrução / doença pulmonar</div>
+    <div class="ddxi">DPOC exacerbado, asma grave, pneumotórax, derrame maciço, auto-PEEP na VM</div>
+    <div class="ddxg" style="margin-top:8px">VM mal configurada (causa iatrogênica — sempre excluir em intubados)</div>
+    <div class="ddxi">Volume minuto insuficiente: VM depende de Volume Corrente × Frequência Respiratória. Se VC baixo (estratégia protetora agressiva) ou FR baixa, a eliminação de CO₂ cai e a PCO₂ sobe. Em SDRA com hipercapnia permissiva isso é intencional — mas em outros contextos pode ser erro de configuração</div>
+    <div class="ddxi">Espaço morto elevado: mesmo com volume minuto adequado, se grande parte do volume vai para alvéolos não perfundidos (TEP, SDRA grave, hiperinsuflação), a eliminação de CO₂ é ineficiente</div>
+    <div class="ddxi">Vazamento ao redor do tubo (cuff desinflado ou tubo mal posicionado) — volume corrente medido pode não refletir o que chega aos alvéolos</div>`;
+  }
+  if(co2Lo||(phAlc&&!hco3Hi)){
+    ddx+=`<div class="ddxt">DDx — Alcalose Respiratória</div>
+    <div style="background:rgba(0,212,255,0.08);border-left:3px solid var(--cyan);border-radius:4px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--text);line-height:1.55"><b style="color:var(--cyan)">⚠ Considerar primeiro:</b> em paciente acordado sem ventilação mecânica, a PCO₂ baixa frequentemente é o <b>bulbo respiratório hiperventilando como compensação de acidose metabólica em curso</b> — mesmo que o pH atual não esteja muito ácido. Antes de investigar outras causas: há acidose metabólica subjacente ou crônica?</div>
+    <div class="ddxg">Outras causas de hiperventilação</div>
+    <div class="ddxi">Dor, ansiedade, agitação psicomotora</div>
+    <div class="ddxi">Hipóxia tecidual (estimulação de quimiorreceptores periféricos) — verificar gradiente A-a</div>
+    <div class="ddxi">Sepse precoce (estimulação direta do centro respiratório), doença hepática grave, gravidez, salicilatos na fase inicial</div>
+    <div class="ddxi">AVC, tumores do SNC, meningite, VM com frequência ou volume corrente excessivos</div>`;
+  }
+
+  const phPos=Math.min(100,Math.max(0,((ph-6.80)/(8.00-6.80))*100)).toFixed(1);
+
+  // ── Módulos novos ──
+  // ── Alerta PaO2 ausente com SpO2 baixa ──
+  const spo2V = g('spo2');
+  const limSpo2Alerta = arterial ? 94 : 70;
+  const spo2Baixa = !isNaN(spo2V) && spo2V < limSpo2Alerta;
+  const po2Ausente = isNaN(po2);
+  let alertaPO2Html = '';
+  if(spo2Baixa && po2Ausente){
+    alertaPO2Html = `<div style="background:rgba(255,59,48,0.10);border:1px solid var(--red);border-radius:8px;padding:12px 14px;margin-bottom:10px" class="a">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);margin-bottom:6px">⚠ PaO₂ não informada — cálculos de oxigenação incompletos</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.6">
+        SpO₂ de <b>${spo2V}%</b> indica hipoxemia${spo2V < 88 ? ' grave' : ' significativa'}, mas sem a <b>PaO₂</b> não é possível calcular:<br>
+        • <b>Relação P/F</b> — classifica gravidade da hipoxemia e orienta suporte ventilatório<br>
+        • <b>Gradiente A-a</b> — diferencia causa pulmonar de extrapulmonar<br><br>
+        Recomenda-se colher gasometria arterial completa com PaO₂ para interpretação adequada da oxigenação neste contexto.
+      </div>
+    </div>`;
+  }
+
+  const lacHtml = renderLactato(lacMmol, lacRaw, lacUnit, agCorr !== null ? agCorr : null, agAlto2 === true, hco3Lo, phAcid);
+  const clCorrHtml = (!isNaN(na) && !isNaN(cl)) ? renderCloroCorrigido(na, cl, hco3, alb) : '';
+  const kphHtml = renderKpH(ph, k, hco3);
+  // Na corrigido pela glicemia (pseudo-hiponatremia dilucional)
+  const naCorrigido = (!isNaN(glicSerica) && glicSerica > 100)
+    ? na + 1.6 * (glicSerica - 100) / 100
+    : null;
+  const sodioHtml = renderSodio(na, naCorrigido, glicSerica);
+  const gradAaHtml = renderGradAa(po2, pco2, fio2, idadeV, arterial, phAlc);
+  const gapOsmHtml = renderGapOsmolar(na, glicemia, ureia, osmMedida, agAlto2 === true);
+
+  // AG urinário — só se acidose metabólica com AG normal
+  // AG urinário: acidose com AG normal puro OU duplo distúrbio (AG elevado + AG normal)
+  const temAcidoseAGNormal = (hco3Lo && agAlto2 === false) || duploDist;
+  const aguHtml = temAcidoseAGNormal ? renderAGU(na_u, k_u, cl_u, ph_u, osm_u_medida, ureia_u, glic_u, hco3Lo, true, k) : '';
+
+  // AG baixo
+  const agBaixoHtml = (agCorr !== null) ? renderAGBaixo(agCorr, na, cl, hco3) : '';
+
+  // Delta ratio refinado com lactato
+  if(agAlto2 && hco3Lo && agCorr !== null){
+    const drCalc = calcDeltaRatioRefinado(agCorr, hco3, lacMmol);
+    if(drCalc && drCalc.usarFatorLatico){
+      deltaRefinadoNota = `<div style="background:rgba(0,232,150,0.08);border:1px solid var(--green);border-radius:6px;padding:9px 12px;margin-top:8px;font-size:11px;color:var(--text)">
+        <b style="color:var(--green)">Refinamento para acidose lática (lactato ≥ 4 mmol/L):</b><br>
+        Na acidose lática, a relação esperada entre ΔAG e ΔHCO₃⁻ é <b>0,6:1</b> (não 1:1 como na cetoacidose). Isso ocorre porque o lactato tem menor clearance renal que os cetoânions — eleva mais o AG proporcionalmente.<br><br>
+        Usando fator 0,6: <b>0,6 × ΔAG ÷ ΔHCO₃⁻</b> = 0,6 × ${drCalc.dAG.toFixed(1)} ÷ ${drCalc.dHCO3.toFixed(1)} = <b>${drCalc.dr.toFixed(2)}</b><br>
+        ${drCalc.dr >= -0.2 && drCalc.dr <= 0.2+1 ? '✓ Consistente com acidose lática pura (sem distúrbio metabólico adicional)' :
+          drCalc.dr > 1 ? '⚠ Mesmo com fator 0,6, ratio > 1 → considerar alcalose metabólica associada' :
+          '⚠ Mesmo com fator 0,6, ratio muito baixo → acidose metabólica adicional com AG normal'}
+      </div>`;
+    }
+  }
+
+  document.getElementById('result-area').innerHTML=`
+  <div class="rscroll">
+    ${alertaHtml}
+    ${alertaPO2Html}
+    <div class="a">
+      <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-bottom:6px">pH medido: <span style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);letter-spacing:0">${ph.toFixed(2)}</span></div>
+      <div class="phbar"><div class="phneedle" style="left:${phPos}%"></div></div>
+      <div style="position:relative;height:16px;margin-bottom:14px;font-size:9px;font-family:var(--mono);color:var(--text2)">
+        <span style="position:absolute;left:0%;transform:translateX(0%)">6.8</span>
+        <span style="position:absolute;left:45.83%;transform:translateX(-50%);color:var(--red)">7.35</span>
+        <span style="position:absolute;left:50%;transform:translateX(-50%);color:var(--green)">7.40</span>
+        <span style="position:absolute;left:54.17%;transform:translateX(-50%);color:var(--yellow)">7.45</span>
+        <span style="position:absolute;left:100%;transform:translateX(-100%)">8.0</span>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="rb ${dCol} a d1">
+      <div class="rbl">Distúrbio primário</div>
+      <div class="rbt">${dTit}</div>
+      <div class="chips">
+        <div class="chip ${ph<7.35?'lo':ph>7.45?'hi':'ok'}"><b>${ph.toFixed(2)}</b> pH</div>
+        <div class="chip ${co2Hi?'hi':co2Lo?'lo':'ok'}"><b>${pco2}</b> PCO₂</div>
+        <div class="chip ${hco3Lo?'lo':hco3Hi?'hi':'ok'}"><b>${hco3}</b> HCO₃⁻</div>
+      </div>
+    </div>
+    ${cTxt?`<div class="rb panel a d2"><div class="rbl">Compensação esperada</div><div class="rbs">${cTxt}</div>${cDev?`<div class="rbs" style="margin-top:5px">${cDev}</div>`:''} ${cNota||''}</div>`:''}
+    ${clCorrHtml}
+    ${agHtml}
+    ${agBaixoHtml}
+    ${lacHtml}
+    ${kphHtml}
+    ${sodioHtml}
+    ${pfHtml}
+    ${gradAaHtml}
+    ${gapOsmHtml}
+    ${aguHtml}
+    ${ddx?`<div class="rb purple a d5"><div class="rbl">Diagnósticos Diferenciais</div>${ddx}</div>`:''}
+    ${gerarSintese(dTit,cDev,agAlto2,agCorr,hco3Lo,co2Hi,co2Lo,hco3Hi,duploDist,lacMmol,k,ph,pfHtml,aguHtml,gradAaHtml,gapOsmHtml)}
+    <div class="disc"><span>⚠</span><span>Ferramenta de uso <b>exclusivamente educacional</b>. Interpretação clínica é responsabilidade do médico assistente. Baseado em: Seifter JL & Berend K. <i>NEJM</i> 2014.</span></div>
+  </div>`;
+}
+</script>
+
+<!-- UPGRADE OVERLAY (só para VL) -->
+<div id="gasolab-upgrade" style="display:none;position:fixed;inset:0;background:#0a0e14;z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;">
+  <div style="font-size:2.5rem;margin-bottom:1rem;">🧪</div>
+  <div style="font-family:'Courier New',monospace;font-size:1.6rem;font-weight:700;color:#00d4ff;margin-bottom:0.5rem;">GasoLab</div>
+  <div style="font-size:1rem;color:#00e896;font-weight:600;margin-bottom:1rem;">A calculadora mais completa de distúrbios ácido-base</div>
+  <a href="/" style="font-size:0.8rem;color:#3d5a78;text-decoration:none;">← Voltar ao VentiLab</a>
+
+  <!-- DEV ONLY: bypass de auth para localhost -->
+  <div id="dev-auth-bypass" style="display:none;margin-top:2rem;border-top:1px dashed #2a4060;padding-top:1.2rem;width:100%;max-width:320px">
+    <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#00d4ff;margin-bottom:8px">🛠 Dev — bypass local</div>
+    <button onclick="devUnlock()"
+      style="width:100%;padding:9px;background:transparent;border:1px dashed #2a4060;border-radius:7px;color:#00d4ff;font-size:12px;font-weight:600;cursor:pointer;">
+      Entrar sem token (localhost)
+    </button>
+  </div>
+</div>
+
+<script>
+function abrirTutorial() {
+  document.getElementById('tutorial-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+function fecharTutorial() {
+  document.getElementById('tutorial-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+(function() {
+  var nivel = localStorage.getItem('vl_nivel') || '';
+  var upgrade = document.getElementById('gasolab-upgrade');
+  if (nivel === 'VLG') {
+    upgrade.style.display = 'none';
+    if (!localStorage.getItem('gasolab_tutorial_seen')) {
+      localStorage.setItem('gasolab_tutorial_seen', '1');
+      abrirTutorial();
+    }
+  } else {
+    // No LM clone: se não tem sessão válida, manda de volta ao VentiLab
+    window.location.href = '/';
+  }
+})();
+
+function devUnlock() {
+  localStorage.setItem('vl_nivel', 'VLG');
+  document.getElementById('gasolab-upgrade').style.display = 'none';
+  document.body.style.overflow = '';
+}
+</script>
+</body>
+</html>
