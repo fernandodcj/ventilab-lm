@@ -1030,7 +1030,7 @@ function renderSodio(na, naCorrigido, glicSerica){
       <div class="ddxg" style="color:var(--text2);margin-top:8px">Causas iatrogênicas / a excluir</div>
       <div class="ddxi">Reposição excessiva de soluções hipotônicas (SG5%, SF 0,45%)</div>
       <div class="ddxi">Hiponatremia pós-operatória (liberação não osmótica de ADH + fluidos hipotônicos)</div>
-      <div class="ddxi">Pseudo-hiponatremia: hiperglicemia (cada 100 mg/dL de glicose acima de 100 reduz Na ~1,6 mEq/L), hipertrigliceridemia grave, hiperproteinemia`;
+      <div class="ddxi">Pseudo-hiponatremia: hiperglicemia (cada 100 mg/dL de glicose acima de 100 reduz Na ~1,6 mEq/L), hipertrigliceridemia grave, hiperproteinemia</div>`;
 
     orientacao = `<div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:9px 12px;margin-top:10px;font-size:11px;color:var(--text);line-height:1.65">
       <b style="color:var(--cyan)">Fórmula de Adrogue-Madias — variação de Na por litro infundido:</b><br><br>
@@ -1089,7 +1089,7 @@ function renderSodio(na, naCorrigido, glicSerica){
       <div class="ddxi">Reposição excessiva de NaCl 0,9% ou NaHCO₃ (especialmente em acidose tratada)</div>
       <div class="ddxi">Nutrição parenteral total hiperosmolar</div>
       <div class="ddxi">Restrição hídrica sem reposição adequada em pacientes internados (idosos, intubados, rebaixados — incapazes de solicitar água)</div>
-      <div class="ddxi">Diuréticos de alça em dose excessiva sem reposição hídrica`;
+      <div class="ddxi">Diuréticos de alça em dose excessiva sem reposição hídrica</div>`;
 
     orientacao = `<div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:9px 12px;margin-top:10px;font-size:11px;color:var(--text);line-height:1.65">
       <b style="color:var(--cyan)">Fórmula de Adrogue-Madias — variação de Na por litro infundido:</b><br><br>
@@ -1397,63 +1397,94 @@ function analisar(){
       agHtml+=`<div class="rbs" style="margin-top:8px"><b>Delta ratio:</b> ${dr.toFixed(2)} — ${drI}</div>
       <div style="background:var(--panel2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;margin-top:10px;font-size:11px;color:var(--text);line-height:1.65">
 
-        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">📐 O que é o Delta Ratio e quando calcular?</div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">📐 Delta Ratio — detectando distúrbios metabólicos sobrepostos</div>
 
-        <div style="margin-bottom:10px"><b>Quando calcular:</b> somente quando há acidose metabólica com <b style="color:var(--cyan)">ânion gap elevado</b>. O delta ratio responde à pergunta: <i style="color:var(--yellow)">"Existe algum outro distúrbio metabólico escondido por trás desta acidose?"</i></div>
-
-        <div style="background:var(--panel);border-left:3px solid var(--cyan);border-radius:4px;padding:10px 12px;margin-bottom:10px">
-          <b style="color:var(--cyan)">Analogia:</b> imagine que você tem um cano entupindo (AG sobe) e outro cano vazando (HCO₃⁻ cai). Em condições normais, cada unidade de entupimento causa exatamente uma unidade de vazamento — proporção 1:1. Se o vazamento for menor que o esperado, alguém está tampando o outro cano por fora (alcalose oculta). Se for maior, há dois canos vazando ao mesmo tempo (acidose hiperclorêmica associada).
+        <div style="background:rgba(0,212,255,0.07);border-left:3px solid var(--cyan);border-radius:4px;padding:10px 12px;margin-bottom:10px">
+          <b style="color:var(--cyan)">Para que serve:</b> o delta ratio só é calculado quando há <b>acidose metabólica com AG elevado</b>. Ele responde a uma pergunta crítica que o AG isolado não consegue responder:<br><br>
+          <span style="font-size:12px;color:var(--yellow);font-style:italic">"Além da acidose com AG elevado que já identifiquei, existe algum outro distúrbio metabólico sobreposto que estou deixando passar?"</span><br><br>
+          Isso importa porque o tratamento muda radicalmente dependendo da resposta. Uma acidose lática isolada é gerada diferentemente de uma acidose lática num paciente que também tem alcalose metabólica oculta por reposição excessiva de bicarbonato — ou que acumulou cloreto por litros de salina.
         </div>
 
-        <div style="margin-bottom:8px"><b>A conta:</b> comparamos o quanto o AG subiu acima de 12 com o quanto o HCO₃⁻ caiu abaixo de 24. Se fosse só uma acidose com AG, essas variações deveriam ser proporcionais.</div>
+        <div style="background:var(--panel);border-left:3px solid var(--text2);border-radius:4px;padding:10px 12px;margin-bottom:10px">
+          <b style="color:var(--text)">A lógica por trás do cálculo:</b><br><br>
+          Quando surge uma acidose metabólica com AG elevado (ex: acidose lática, cetoacidose), dois eventos acontecem simultaneamente e de forma <b>proporcional</b>:<br><br>
+          • O AG <b>sobe</b> porque ânions ácidos (lactato, cetoácidos...) se acumulam no plasma<br>
+          • O HCO₃⁻ <b>cai</b> porque ele tampona esses ácidos e é consumido<br><br>
+          A proporção esperada é <b>1:1</b> — cada mEq/L de aumento no AG acima de 12 corresponde a aproximadamente 1 mEq/L de queda no HCO₃⁻ abaixo de 24.<br><br>
+          O delta ratio <b>compara essas duas variações</b>. Se a proporção não bater 1:1, é porque outro distúrbio está interferindo no HCO₃⁻ de forma independente.
+        </div>
 
-        <div style="background:var(--panel);border-radius:4px;padding:8px 12px;font-family:var(--mono);font-size:13px;color:var(--text);margin-bottom:10px;text-align:center">
+        <div style="background:var(--panel);border-radius:4px;padding:8px 12px;font-family:var(--mono);font-size:13px;color:var(--text);margin-bottom:12px;text-align:center">
           Δ ratio = <span style="color:var(--cyan)">(AG corrigido − 12)</span> ÷ <span style="color:var(--yellow)">(24 − HCO₃⁻)</span> = <b style="color:var(--green);font-size:15px">${dr.toFixed(2)}</b>
         </div>
 
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--text2);margin-bottom:7px;text-transform:uppercase">Interpretação:</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:var(--text2);margin-bottom:8px;text-transform:uppercase">Os 4 cenários possíveis — qual é o seu caso?</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
 
-          <div style="background:${dr<0.4?'rgba(255,214,10,0.12)':'var(--panel)'};border:1px solid ${dr<0.4?'var(--yellow)':'var(--border)'};border-radius:6px;padding:9px 12px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-              <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${dr<0.4?'var(--yellow)':'var(--text2)'}">&lt; 0,4</span>
-              ${dr<0.4?'<span style="font-size:10px;background:var(--yellow);color:#000;border-radius:3px;padding:1px 7px;font-weight:700">← ESTE CASO</span>':''}
+          <!-- CENÁRIO 1: < 0,4 -->
+          <div style="background:${dr<0.4?'rgba(255,214,10,0.12)':'var(--panel)'};border:1px solid ${dr<0.4?'var(--yellow)':'var(--border)'};border-radius:6px;padding:10px 12px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <span style="font-family:var(--mono);font-weight:700;font-size:13px;color:${dr<0.4?'var(--yellow)':'var(--text2)'}">&lt; 0,4</span>
+              <span style="font-size:11px;font-weight:600;color:${dr<0.4?'var(--yellow)':'var(--text2)'}">AG elevado + AG normal associado (predominância hiperclorêmica)</span>
+              ${dr<0.4?'<span style="font-size:10px;background:var(--yellow);color:#000;border-radius:3px;padding:1px 7px;font-weight:700;margin-left:auto;white-space:nowrap">← ESTE CASO</span>':''}
             </div>
-            <div style="font-size:11px;color:${dr<0.4?'var(--text)':'var(--text2)'};line-height:1.55">O HCO₃⁻ caiu mais do que o AG elevado justificaria sozinho — há uma <b>segunda causa com AG normal</b> deprimindo o bicarbonato ao mesmo tempo.</div>
-            ${dr<0.4?`<div style="margin-top:6px;font-size:11px;color:var(--text);border-top:1px solid var(--border);padding-top:6px"><b style="color:var(--yellow)">Exemplo ilustrativo (apenas do padrão matemático):</b> paciente séptico com acidose lática (AG alto) + salina em volume (acidose hiperclorêmica associada). Dois mecanismos deprimindo o HCO₃⁻ ao mesmo tempo. <i style="color:var(--text2)">Este exemplo não é o diagnóstico deste caso — consulte os diagnósticos diferenciais abaixo e correlacione com a clínica.</i></div>`:''}
+            <div style="font-size:11px;color:${dr<0.4?'var(--text)':'var(--text2)'};line-height:1.6">
+              O HCO₃⁻ caiu <b>muito mais</b> do que o aumento do AG justificaria sozinho. Isso significa que além da causa do AG elevado, há uma <b>segunda acidose metabólica independente com AG normal</b> consumindo bicarbonato adicional — tipicamente de origem hiperclorêmica.<br><br>
+              ${dr<0.4?`<b style="color:var(--yellow)">Na prática clínica:</b> cenário comum em pacientes que receberam <b>grandes volumes de salina isotônica</b> (NaCl 0,9%) simultaneamente à doença que gerou o AG elevado. Por exemplo, séptico com acidose lática tratado na emergência com 3–4L de SF — a salina gera acidose hiperclorêmica por excesso de cloreto, que se soma à lática e derruba o HCO₃⁻ além do esperado. Também visto em cetoacidose diabética com insuficiência renal ou diarreia concomitante.<br><br>
+              <b>Importância clínica:</b> se você não identificar o segundo componente hiperclorêmico, pode continuar repondo salina achando que está tratando apenas a acidose lática — piorando o componente hiperclorêmico sem perceber.`:''}
+            </div>
           </div>
 
-          <div style="background:${dr>=0.4&&dr<1?'rgba(255,214,10,0.12)':'var(--panel)'};border:1px solid ${dr>=0.4&&dr<1?'var(--yellow)':'var(--border)'};border-radius:6px;padding:9px 12px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-              <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${dr>=0.4&&dr<1?'var(--yellow)':'var(--text2)'}">0,4 – 1,0</span>
-              ${dr>=0.4&&dr<1?'<span style="font-size:10px;background:var(--yellow);color:#000;border-radius:3px;padding:1px 7px;font-weight:700">← ESTE CASO</span>':''}
+          <!-- CENÁRIO 2: 0,4–1,0 -->
+          <div style="background:${dr>=0.4&&dr<1?'rgba(255,214,10,0.12)':'var(--panel)'};border:1px solid ${dr>=0.4&&dr<1?'var(--yellow)':'var(--border)'};border-radius:6px;padding:10px 12px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <span style="font-family:var(--mono);font-weight:700;font-size:13px;color:${dr>=0.4&&dr<1?'var(--yellow)':'var(--text2)'}">0,4 – 1,0</span>
+              <span style="font-size:11px;font-weight:600;color:${dr>=0.4&&dr<1?'var(--yellow)':'var(--text2)'}">AG elevado predominante + componente de AG normal</span>
+              ${dr>=0.4&&dr<1?'<span style="font-size:10px;background:var(--yellow);color:#000;border-radius:3px;padding:1px 7px;font-weight:700;margin-left:auto;white-space:nowrap">← ESTE CASO</span>':''}
             </div>
-            <div style="font-size:11px;color:${dr>=0.4&&dr<1?'var(--text)':'var(--text2)'};line-height:1.55">Distúrbio misto: acidose com AG predominante + componente de acidose com AG normal associado. A causa do segundo componente depende do contexto clínico.</div>
-            ${dr>=0.4&&dr<1?`<div style="margin-top:6px;font-size:11px;color:var(--text);border-top:1px solid var(--border);padding-top:6px"><b style="color:var(--yellow)">Exemplo ilustrativo (apenas do padrão matemático):</b> cetoacidose com insuficiência renal associada, ou séptico com salina moderada — ambos com um segundo mecanismo de AG normal contribuindo. <i style="color:var(--text2)">Este exemplo não é o diagnóstico deste caso — consulte os diagnósticos diferenciais abaixo e correlacione com a clínica.</i></div>`:''}
+            <div style="font-size:11px;color:${dr>=0.4&&dr<1?'var(--text)':'var(--text2)'};line-height:1.6">
+              O HCO₃⁻ caiu <b>mais do que o esperado</b>, porém não tanto quanto no cenário anterior. A causa com AG elevado é predominante, mas existe um segundo mecanismo com AG normal contribuindo de forma menos expressiva.<br><br>
+              ${dr>=0.4&&dr<1?`<b style="color:var(--yellow)">Na prática clínica:</b> faixa de transição — exemplos incluem cetoacidose com grau leve a moderado de insuficiência renal associada, ou séptico com salina em volume menor. O componente hiperclorêmico existe mas não domina o quadro.<br><br>
+              <b>Importância clínica:</b> identificar o segundo componente orienta a evitar excessos de cloreto e a não atribuir toda a acidose a uma única causa.`:''}
+            </div>
           </div>
 
-          <div style="background:${dr>=1&&dr<=2?'rgba(0,232,150,0.10)':'var(--panel)'};border:1px solid ${dr>=1&&dr<=2?'var(--green)':'var(--border)'};border-radius:6px;padding:9px 12px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-              <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${dr>=1&&dr<=2?'var(--green)':'var(--text2)'}">1,0 – 2,0</span>
-              ${dr>=1&&dr<=2?'<span style="font-size:10px;background:var(--green);color:#000;border-radius:3px;padding:1px 7px;font-weight:700">← ESTE CASO</span>':''}
+          <!-- CENÁRIO 3: 1,0–2,0 -->
+          <div style="background:${dr>=1&&dr<=2?'rgba(0,232,150,0.10)':'var(--panel)'};border:1px solid ${dr>=1&&dr<=2?'var(--green)':'var(--border)'};border-radius:6px;padding:10px 12px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <span style="font-family:var(--mono);font-weight:700;font-size:13px;color:${dr>=1&&dr<=2?'var(--green)':'var(--text2)'}">1,0 – 2,0</span>
+              <span style="font-size:11px;font-weight:600;color:${dr>=1&&dr<=2?'var(--green)':'var(--text2)'}">Acidose metabólica com AG elevado pura ✓</span>
+              ${dr>=1&&dr<=2?'<span style="font-size:10px;background:var(--green);color:#000;border-radius:3px;padding:1px 7px;font-weight:700;margin-left:auto;white-space:nowrap">← ESTE CASO</span>':''}
             </div>
-            <div style="font-size:11px;color:${dr>=1&&dr<=2?'var(--text)':'var(--text2)'};line-height:1.55">✓ Esperado — acidose metabólica com AG elevado pura. AG e HCO₃⁻ variaram proporcionalmente, sem distúrbio metabólico adicional.</div>
-            ${dr>=1&&dr<=2?`<div style="margin-top:6px;font-size:11px;color:var(--text);border-top:1px solid var(--border);padding-top:6px"><b style="color:var(--green)">Exemplo ilustrativo (apenas do padrão matemático):</b> cetoacidose diabética sem distúrbios associados, onde AG e HCO₃⁻ variam proporcionalmente. <i style="color:var(--text2)">Este exemplo não é o diagnóstico deste caso — qualquer causa de AG elevado pode apresentar este padrão. Consulte os diagnósticos diferenciais abaixo e correlacione com a clínica.</i></div>`:''}
+            <div style="font-size:11px;color:${dr>=1&&dr<=2?'var(--text)':'var(--text2)'};line-height:1.6">
+              A variação do AG e a queda do HCO₃⁻ são <b>proporcionais entre si</b> — exatamente o esperado quando há apenas uma causa com AG elevado atuando isoladamente. Não há evidência de distúrbio metabólico adicional sobreposto.<br><br>
+              ${dr>=1&&dr<=2?`<b style="color:var(--green)">Na prática clínica:</b> acidose lática isolada, cetoacidose diabética sem complicações adicionais, intoxicação por salicilato. O AG explica toda a queda do HCO₃⁻, sem sobras nem déficits.<br><br>
+              <b>Importância clínica:</b> o tratamento pode ser focado na causa única identificada. Mas atenção — isso não elimina a necessidade de investigar a <i>causa</i> do AG elevado pelos diagnósticos diferenciais abaixo.`:''}
+            </div>
           </div>
 
-          <div style="background:${dr>2?'rgba(0,212,255,0.10)':'var(--panel)'};border:1px solid ${dr>2?'var(--cyan)':'var(--border)'};border-radius:6px;padding:9px 12px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-              <span style="font-family:var(--mono);font-weight:700;font-size:12px;color:${dr>2?'var(--cyan)':'var(--text2)'}">&gt; 2,0</span>
-              ${dr>2?'<span style="font-size:10px;background:var(--cyan);color:#000;border-radius:3px;padding:1px 7px;font-weight:700">← ESTE CASO</span>':''}
+          <!-- CENÁRIO 4: > 2,0 -->
+          <div style="background:${dr>2?'rgba(160,120,255,0.10)':'var(--panel)'};border:1px solid ${dr>2?'#a078ff':'var(--border)'};border-radius:6px;padding:10px 12px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <span style="font-family:var(--mono);font-weight:700;font-size:13px;color:${dr>2?'#a078ff':'var(--text2)'}">&gt; 2,0</span>
+              <span style="font-size:11px;font-weight:600;color:${dr>2?'#a078ff':'var(--text2)'}">AG elevado + Alcalose metabólica oculta</span>
+              ${dr>2?'<span style="font-size:10px;background:#a078ff;color:#000;border-radius:3px;padding:1px 7px;font-weight:700;margin-left:auto;white-space:nowrap">← ESTE CASO</span>':''}
             </div>
-            <div style="font-size:11px;color:${dr>2?'var(--text)':'var(--text2)'};line-height:1.55">Alcalose metabólica oculta: o HCO₃⁻ caiu menos do que o esperado — algo estava elevando o bicarbonato antes da acidose e mascara sua queda.</div>
-            ${dr>2?`<div style="margin-top:6px;font-size:11px;color:var(--text);border-top:1px solid var(--border);padding-top:6px"><b style="color:var(--cyan)">Exemplo ilustrativo (apenas do padrão matemático):</b> cetoacidose + vômitos prévios, onde a alcalose estava elevando o HCO₃⁻ antes da crise e mascara a queda. <i style="color:var(--text2)">Este exemplo não é o diagnóstico deste caso — consulte os diagnósticos diferenciais abaixo e correlacione com a clínica.</i></div>`:''}
+            <div style="font-size:11px;color:${dr>2?'var(--text)':'var(--text2)'};line-height:1.6">
+              O HCO₃⁻ caiu <b>menos do que o esperado</b> para o grau de elevação do AG. Isso significa que havia algo elevando o bicarbonato de forma independente — uma <b>alcalose metabólica coexistindo com a acidose</b>, que "amortece" a queda do HCO₃⁻ e mascara a real gravidade da acidose.<br><br>
+              ${dr>2?`<div style="background:rgba(160,120,255,0.08);border:1px solid rgba(160,120,255,0.4);border-radius:5px;padding:9px 11px;margin-bottom:8px">
+                <b style="color:#a078ff">⚠ A alcalose metabólica oculta mais importante de reconhecer na UTI: reposição excessiva de bicarbonato.</b><br><br>
+                Imagine um paciente com acidose lática (AG = 20, HCO₃⁻ = 14). A equipe repõe NaHCO₃ para "tamponar" a acidose, elevando o HCO₃⁻ para 22. O AG continua em 20 — a causa da acidose não foi tratada. Mas agora o delta ratio fica > 2, porque o HCO₃⁻ caiu menos do que o AG explica. <b>A alcalose iatrogênica está mascarando a gravidade real da acidose.</b> Se a causa do AG não for resolvida, quando o bicarbonato exógeno for metabolizado, a acidemia irrompe com força total — muitas vezes pior do que antes.<br><br>
+                <b>Outras causas de alcalose metabólica oculta:</b> vômitos prévios intensos (perda de HCl gástrico), uso de diuréticos de alça ou tiazídicos, contração de volume com retenção renal de HCO₃⁻, hiperaldosteronismo — qualquer situação que tenha elevado o HCO₃⁻ antes ou durante a instalação da acidose.
+              </div>
+              <b style="color:#a078ff">Importância clínica:</b> o HCO₃⁻ atual subestima a gravidade da acidose subjacente. Se você tratar apenas o AG sem identificar e corrigir a alcalose oculta, o balanço ácido-base real do paciente é pior do que parece — e a resolução da acidose com AG irá "expor" a alcalose residual com HCO₃⁻ ainda elevado.`:''}
+            </div>
           </div>
 
         </div>
 
         <div style="background:var(--panel);border-left:3px solid var(--yellow);border-radius:4px;padding:9px 12px;font-size:11px">
-          <b style="color:var(--yellow)">⚠ Limitação:</b> o delta ratio assume HCO₃⁻ basal de 24 e AG normal de 12. Em pacientes com distúrbios crônicos (insuficiência renal, DPOC, alcalose metabólica crônica), esses valores basais são diferentes — o resultado pode enganar se não for contextualizado clinicamente.
+          <b style="color:var(--yellow)">⚠ Limitação importante:</b> o delta ratio assume HCO₃⁻ basal de 24 e AG normal de 12 como pontos de referência. Em pacientes com distúrbios <i>crônicos</i> — insuficiência renal crônica (HCO₃⁻ basal já baixo), DPOC com retenção crônica de CO₂ (HCO₃⁻ basal já alto), ou alcalose metabólica crônica pré-existente — esses valores basais são diferentes e o resultado pode ser enganoso. Sempre contextualizar com a história clínica.
         </div>
       </div>`;
     }
@@ -1520,19 +1551,19 @@ function analisar(){
       pfNota='';
     } else if(pf>200){
       pfC='yellow';
-      pfT='Hipoxemia moderada (P/F 200–300).';
+      pfT='Hipoxemia leve (P/F 200–300).';
       pfNota=`<div style="background:var(--panel);border-left:3px solid var(--yellow);border-radius:4px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
         Pela <b>Definição de Berlim</b>, P/F nesta faixa corresponderia ao critério de <i>hipoxemia leve</i> — mas SDRA é um diagnóstico clínico-radiológico que exige: início agudo (≤ 7 dias), infiltrado bilateral ao RX/TC não explicado por derrame ou colapso, e exclusão de edema cardiogênico como causa principal. <b>P/F baixo isoladamente não define SDRA.</b>
       </div>`;
     } else if(pf>100){
       pfC='red';
-      pfT='Hipoxemia grave (P/F 100–200).';
+      pfT='Hipoxemia moderada (P/F 100–200).';
       pfNota=`<div style="background:var(--panel);border-left:3px solid var(--red);border-radius:4px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
         Pela <b>Definição de Berlim</b>, P/F nesta faixa corresponderia ao critério de <i>hipoxemia moderada</i> — mas SDRA é um diagnóstico clínico-radiológico que exige: início agudo (≤ 7 dias), infiltrado bilateral ao RX/TC não explicado por derrame ou colapso, e exclusão de edema cardiogênico como causa principal. <b>P/F baixo isoladamente não define SDRA — o diagnóstico depende do conjunto de critérios.</b>
       </div>`;
     } else {
       pfC='red';
-      pfT='Hipoxemia muito grave (P/F ≤ 100).';
+      pfT='Hipoxemia grave (P/F ≤ 100).';
       pfNota=`<div style="background:var(--panel);border-left:3px solid var(--red);border-radius:4px;padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.6">
         Pela <b>Definição de Berlim</b>, P/F ≤ 100 corresponderia ao critério de <i>hipoxemia grave</i> — mas SDRA é um diagnóstico clínico-radiológico que exige: início agudo (≤ 7 dias), infiltrado bilateral ao RX/TC não explicado por derrame ou colapso, e exclusão de edema cardiogênico como causa principal. <b>P/F baixo isoladamente não define SDRA.</b> Outras causas de hipoxemia grave devem ser consideradas: pneumonia extensa, atelectasia maciça, tromboembolismo pulmonar, edema cardiogênico.
       </div>`;
@@ -1548,11 +1579,11 @@ function analisar(){
         </div>
         <div style="background:var(--panel2);border:1px solid ${pf>100&&pf<=200?'var(--red)':'var(--border)'};border-radius:5px;padding:6px 4px">
           <div style="color:var(--red);font-weight:700;font-family:var(--mono)">100–200</div>
-          <div style="color:var(--text2)">Hipoxemia grave</div>
+          <div style="color:var(--text2)">Hipoxemia moderada</div>
         </div>
         <div style="background:var(--panel2);border:1px solid ${pf<=100?'var(--red)':'var(--border)'};border-radius:5px;padding:6px 4px">
           <div style="color:var(--red);font-weight:700;font-family:var(--mono)">≤ 100</div>
-          <div style="color:var(--text2)">Hipoxemia muito grave</div>
+          <div style="color:var(--text2)">Hipoxemia grave</div>
         </div>
       </div>
       ${pfNota}
@@ -1574,8 +1605,11 @@ function analisar(){
   let ddx='';
 
   if(hco3Lo||(phAcid&&!co2Hi)||duploDist){
+    const drValor = drParaDDx;
+    const alcaloseOculta = drValor !== null && drValor > 2;
     const notaDuplo = duploDist ? `<div style="background:rgba(255,214,10,0.08);border:1px solid var(--yellow);border-radius:5px;padding:7px 10px;margin-bottom:6px;font-size:11px;color:var(--text)">⚡ <b>Delta ratio indica duplo distúrbio metabólico (AG elevado + AG normal).</b> Os diagnósticos diferenciais abaixo cobrem ambos os mecanismos — procurar causa para cada um.</div>` : '';
-    ddx+=`<div class="ddxt">DDx — Acidose Metabólica</div>${notaDuplo}`;
+    const notaAlcOculta = alcaloseOculta ? `<div style="background:rgba(160,120,255,0.10);border:1px solid #a078ff;border-radius:5px;padding:7px 10px;margin-bottom:6px;font-size:11px;color:var(--text)">⚡ <b style="color:#a078ff">Delta ratio > 2 — alcalose metabólica oculta associada.</b> O HCO₃⁻ caiu menos do que o AG elevado justificaria sozinho, indicando que havia um processo elevando o bicarbonato <i>antes ou durante</i> a acidose. Os diagnósticos diferenciais abaixo incluem as causas mais prováveis dessa alcalose oculta.</div>` : '';
+    ddx+=`<div class="ddxt">DDx — Acidose Metabólica</div>${notaDuplo}${notaAlcOculta}`;
     if(agAlto2!==false){
       ddx+=`<div class="ddxg" style="color:var(--red)">AG Elevado (> 12)</div>
       <div class="ddxi">Cetoacidose diabética, alcoólica, por jejum prolongado</div>
@@ -1605,6 +1639,15 @@ function analisar(){
         <b>Por quê?</b> Em pacientes desidratados ou com hiponatremia, o cloro sérico pode estar falsamente normal ou até baixo, mesmo que proporcionalmente elevado em relação ao sódio. O <b style="color:var(--cyan)">cloro corrigido</b> (Cl medido × 140 ÷ Na medido) é mais confiável nesses casos.<br><br>
         Além disso, causas como <b>acidose tubular renal e diarreia crônica</b> podem cursar com AG normal e cloro dentro da faixa de referência laboratorial — o diagnóstico fica pelo contexto clínico e pela exclusão de AG elevado.
       </div>`;
+    }
+    if(alcaloseOculta){
+      ddx+=`<div class="ddxg" style="color:#a078ff;margin-top:8px">Alcalose Metabólica Oculta Associada (delta ratio > 2)</div>
+      <div class="ddxi"><b>Reposição excessiva de bicarbonato de sódio</b> — causa iatrogênica mais comum na UTI. O HCO₃⁻ exógeno eleva o bicarbonato plasmático, mascara a queda esperada pela acidose com AG e gera ratio > 2. A causa do AG não foi resolvida — quando o bicarbonato for metabolizado, a acidemia ressurge com intensidade</div>
+      <div class="ddxi"><b>Vômitos intensos prévios</b> — perda de HCl gástrico eleva o HCO₃⁻ antes da instalação da acidose metabólica. Frequente em cetoacidose diabética com vômitos como apresentação inicial</div>
+      <div class="ddxi"><b>Diuréticos de alça ou tiazídicos</b> — contração de volume + perda de Cl⁻ → retenção renal de HCO₃⁻ (alcalose de contração). O bicarbonato elevado preexistente atenua a queda durante a acidose com AG</div>
+      <div class="ddxi"><b>Hiperaldosteronismo</b> (primário ou secundário) — aldosterona promove excreção de H⁺ e K⁺ e retenção de HCO₃⁻. Suspeitar em hipocalemia + HCO₃⁻ desproporcionalmente alto para o grau de acidose</div>
+      <div class="ddxi"><b>Alcalose pós-hipercápnica</b> — paciente com DPOC que retinha CO₂ cronicamente (HCO₃⁻ basal elevado por compensação) e agora desenvolve acidose com AG. O HCO₃⁻ basal alto mascara a queda esperada</div>
+      <div class="ddxi"><b>Contração de volume sem reposição adequada</b> — depleção de volume leva à retenção renal de sódio e bicarbonato (alcalose de contração), que pode coexistir com acidose lática por hipoperfusão</div>`;
     }
   }
   if(hco3Hi||(phAlc&&!co2Lo)||(misto&&phAlc&&co2Lo)){
