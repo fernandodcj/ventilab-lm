@@ -1387,7 +1387,7 @@ function analisar(){
       <div class="rbs" style="margin-bottom:8px">${agAlto?'⬆ Ânion gap <b>elevado</b> (> 12 corrigido pela albumina)':'✓ Ânion gap normal (≤ 12)'}</div>
       <div style="background:var(--panel);border-radius:5px;padding:9px 12px;font-size:11px;color:var(--text);line-height:1.65">
         <div style="margin-bottom:6px"><b style="color:var(--cyan)">Fórmula:</b> AG = Na⁺ − (Cl⁻ + HCO₃⁻) = ${na} − (${cl} + ${hco3}) = <b>${ag.toFixed(1)} mEq/L</b></div>
-        ${!isNaN(alb)?`<div style="margin-bottom:6px"><b style="color:var(--cyan)">Correção pela albumina:</b> AG corrigido = AG + 2,5 × (4,0 − albumina) = ${ag.toFixed(1)} + 2,5 × (4,0 − ${alb}) = <b>${agC.toFixed(1)} mEq/L</b></div>`:''}
+        ${!isNaN(alb)?`<div style="margin-bottom:6px"><b style="color:var(--cyan)">Correção pela albumina:</b> AG corrigido = AG + 2,5 × (4,0 − albumina) = ${ag.toFixed(1)} + 2,5 × (4,0 − ${alb}) = <b>${agC.toFixed(1)} mEq/L</b></div>`:`<div style="margin-bottom:6px;background:rgba(255,214,10,0.10);border:1px solid var(--yellow);border-radius:5px;padding:7px 10px"><b style="color:var(--yellow)">⚠ Albumina não informada — usando 4,0 g/dL como padrão.</b> Isso pode subestimar o AG real. Pacientes críticos frequentemente têm hipoalbuminemia: cada 1 g/dL abaixo de 4,0 reduz o AG em ~2,5 mEq/L, podendo mascarar acidose com AG elevado. <b>Informe a albumina sérica para correção precisa.</b></div>`}
         <div style="color:var(--text2)"><b style="color:var(--text)">Por que corrigir pela albumina?</b> A albumina é um ânion não medido — contribui naturalmente para o AG. Em hipoalbuminemia, o AG fica artificialmente baixo e pode mascarar uma acidose real: para cada 1 g/dL de queda na albumina abaixo de 4,0, o AG cai ~2,5 mEq/L. Sem correção, mais de 50% dos casos de AG elevado em pacientes com albumina baixa passam despercebidos.</div>
       </div>
       ${!isNaN(alb)&&alb<3.5?`<div class="rbs" style="color:var(--yellow);margin-top:6px">⚠ Albumina baixa (${alb} g/dL) — sem correção o AG seria subestimado em ${(2.5*(4.0-alb)).toFixed(1)} mEq/L</div>`:''}`;
@@ -1459,6 +1459,54 @@ function analisar(){
     }
     agHtml += deltaRefinadoNota || '';
     agHtml+='</div>';
+  } else if(temAcidoseMetab){
+    // Acidose metabólica detectada mas sem Na⁺ e/ou Cl⁻ para calcular AG
+    const faltaNa = isNaN(na), faltaCl = isNaN(cl);
+    const faltaAlb = isNaN(alb);
+    const examesFaltantes = [];
+    if(faltaNa) examesFaltantes.push('<b>Na⁺</b> (sódio sérico)');
+    if(faltaCl) examesFaltantes.push('<b>Cl⁻</b> (cloro sérico)');
+    agHtml = `<div class="rb yellow a d3">
+      <div class="rbl">Ânion Gap — dados insuficientes</div>
+      <div class="rbt">⚗ Raciocínio incompleto — próximos passos necessários</div>
+      <div style="background:var(--panel);border-radius:7px;padding:12px 14px;margin-top:8px;font-size:11px;color:var(--text);line-height:1.7">
+
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">🔍 Por que o ânion gap é indispensável aqui?</div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="background:var(--cyan);color:#000;font-size:10px;font-weight:700;width:20px;height:20px;min-width:20px;border-radius:50%;display:flex;align-items:center;justify-content:center">1</div>
+            <div><b style="color:var(--cyan)">Acidose metabólica detectada</b> — HCO₃⁻ baixo confirma componente metabólico. O próximo passo obrigatório é calcular o <b>ânion gap</b>, que classifica a causa em dois grandes grupos com mecanismos e tratamentos completamente diferentes.</div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="background:var(--yellow);color:#000;font-size:10px;font-weight:700;width:20px;height:20px;min-width:20px;border-radius:50%;display:flex;align-items:center;justify-content:center">2</div>
+            <div><b style="color:var(--yellow)">Para calcular o AG, são necessários:</b> Na⁺ − (Cl⁻ + HCO₃⁻). Você já tem o HCO₃⁻. <b>Informe ${examesFaltantes.join(' e ')} no painel de eletrólitos</b> para que o cálculo seja realizado.</div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="background:var(--text2);color:#000;font-size:10px;font-weight:700;width:20px;height:20px;min-width:20px;border-radius:50%;display:flex;align-items:center;justify-content:center">3</div>
+            <div><b style="color:var(--text)">O AG deve ser corrigido pela albumina</b> — em pacientes críticos com hipoalbuminemia, o AG não corrigido pode ser falsamente normal, mascarando acidose grave. ${faltaAlb ? '<b style="color:var(--yellow)">Informe também a albumina sérica (campo acima).</b>' : `Albumina informada (${alb} g/dL) — a correção será feita automaticamente.`}</div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="background:var(--border2);color:var(--text2);font-size:10px;font-weight:700;width:20px;height:20px;min-width:20px;border-radius:50%;display:flex;align-items:center;justify-content:center">4</div>
+            <div style="color:var(--text2)"><b style="color:var(--text)">Com o AG em mãos, o raciocínio se bifurca:</b>
+              <div style="margin-top:6px;padding-left:4px;border-left:2px solid var(--border2)">
+                <div style="margin-bottom:4px">→ <b style="color:var(--red)">AG elevado (> 12 corrigido):</b> causas que acumulam ânions não medidos — acidose lática, cetoacidose, intoxicações, insuficiência renal. O delta ratio revelará se há distúrbio metabólico adicional oculto.</div>
+                <div>→ <b style="color:var(--green)">AG normal (≤ 12):</b> acidose hiperclorêmica — causas extra-renais (diarreia, fístulas) ou renais (acidose tubular renal). O ânion gap urinário (campos opcionais abaixo) diferenciará essas etiologias.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="background:rgba(255,214,10,0.08);border:1px solid var(--yellow);border-radius:5px;padding:8px 10px;font-size:11px;color:var(--text)">
+          ⚡ <b>Preencha Na⁺${faltaCl?' e Cl⁻':''} e clique em "Analisar" novamente</b> — o sistema calculará o AG corrigido, o delta ratio (se aplicável) e os diagnósticos diferenciais completos.
+        </div>
+      </div>
+    </div>`;
   }
 
   // P/F
